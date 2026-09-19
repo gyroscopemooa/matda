@@ -1206,10 +1206,12 @@ main {
   font-weight: 400;
 }
 .profile-photo {
+  display: block;
   width: 100%;
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
+  object-position: center;
 }
 .profile-avatar-picker {
   border: 0;
@@ -1217,7 +1219,8 @@ main {
   min-width: 0;
 }
 .profile-avatar-picker .big-avatar {
-  display: inline-flex;
+  display: inline-grid;
+  place-items: center;
   overflow: hidden;
 }
 .profile-avatar-picker p {
