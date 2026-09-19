@@ -141,6 +141,8 @@ export async function loadCommunity(
       ...(p.is_sample
         ? { authorName: "해죠 운영팀", authorAvatar: "sun" }
         : {}),
+      communitySector: p.community_sector || "personal",
+      communityPurpose: p.community_purpose || "general",
       type: p.post_type,
       category: p.category_id || "",
       serviceMode: p.service_mode || "local",
@@ -311,6 +313,12 @@ export async function communityAction(
         author_id: user.id,
         post_type: r.type,
         audience: "consumer",
+        ...(r.communitySector === "business" || "community_sector" in r
+          ? {
+              community_sector: r.communitySector || "personal",
+              community_purpose: r.communityPurpose || "general",
+            }
+          : {}),
         category_id: r.category || null,
         title: r.title,
         body: r.body,

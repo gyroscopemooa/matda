@@ -1,4 +1,6 @@
-import { publishedGuides } from "@/lib/guides";
+import { readGuides } from "@/lib/guide-server";
+import { siteUrl, searchEnabled, homeTitle, homeDescription } from "@/lib/seo";
+export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Workspace from "@/components/workspace";
@@ -61,19 +63,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   }
   if (parts[0] === "guides" && parts.length === 2) {
-    const guide = publishedGuides.find((g) => g.slug === parts[1]);
+    const guide = (await readGuides()).find((g) => g.slug === parts[1]);
     if (!guide) notFound();
     title = guide.title;
     description = guide.intro;
   }
   return {
-    title: title || siteConfig.name,
-    description,
-    robots: { index: false, follow: false },
+    title: !parts.length ? { absolute: homeTitle } : title || siteConfig.name,
+    description: !parts.length ? homeDescription : description,
+    alternates: { canonical: siteUrl + "/" + parts.join("/") },
+    robots: {
+      index: searchEnabled() && (!parts.length || parts[0] === "guides"),
+      follow: searchEnabled() && (!parts.length || parts[0] === "guides"),
+    },
     openGraph: {
       title: title || siteConfig.name,
       description,
       locale: "ko_KR",
+      siteName: "해죠",
+      url: siteUrl + "/" + parts.join("/"),
+      images: [
+        {
+          url: siteUrl + "/brand/candidate-1.webp",
+          alt: "해죠 · 필요한 일이 있나요? 일단 올려죠.",
+        },
+      ],
       type: "website",
     },
   };
@@ -96,8 +110,42 @@ export default async function Page({ params }: Props) {
   if (
     parts[0] === "guides" &&
     parts.length === 2 &&
-    !publishedGuides.some((g) => g.slug === parts[1])
+    !(await readGuides()).some((g) => g.slug === parts[1])
   )
     notFound();
-  return <Workspace />;
+  const articles = parts[0] === "guides" ? await readGuides() : undefined;
+  const guide = articles?.find((g) => g.slug === parts[1]);
+  const structured = guide
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        headline: guide.title,
+        description: guide.intro,
+        dateModified: guide.updatedAt,
+        author: { "@type": "Organization", name: "해죠 운영팀" },
+        publisher: { "@type": "Organization", name: "해죠" },
+        mainEntityOfPage: siteUrl + "/guides/" + guide.slug,
+        image: siteUrl + "/brand/candidate-1.webp",
+      }
+    : !parts.length
+      ? {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "해죠",
+          url: siteUrl + "/",
+        }
+      : null;
+  return (
+    <>
+      {structured && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structured).replace(/</g, "\\u003c"),
+          }}
+        />
+      )}
+      <Workspace initialGuides={articles} />
+    </>
+  );
 }

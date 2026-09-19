@@ -6,15 +6,17 @@ import { publishedGuides, type Guide } from "@/lib/guides";
 
 export default function GuideLibrary({
   slug,
+  articles = publishedGuides,
   onRequest,
 }: {
   slug?: string;
+  articles?: Guide[];
   onRequest: (guide: Guide) => void;
 }) {
   const [category, setCategory] = useState("전체");
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
-  const guide = publishedGuides.find((g) => g.slug === slug);
+  const guide = articles.find((g) => g.slug === slug);
   async function copy(value: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -40,6 +42,24 @@ export default function GuideLibrary({
           {guide.author} · 업데이트 {guide.updatedAt}
         </p>
         <p>{guide.intro}</p>
+        {guide.sections?.map((section) => (
+          <section key={section.heading}>
+            <h2>{section.heading}</h2>
+            <p style={{ whiteSpace: "pre-wrap" }}>{section.body}</p>
+          </section>
+        ))}
+        {!!guide.sources?.length && (
+          <section>
+            <h2>참고 자료</h2>
+            {guide.sources.map((url) => (
+              <p key={url}>
+                <a href={url} rel="noopener noreferrer" target="_blank">
+                  {url}
+                </a>
+              </p>
+            ))}
+          </section>
+        )}
         <h2>요청 전 체크리스트</h2>
         <ol>
           {guide.checks.map((item) => (
@@ -69,7 +89,7 @@ export default function GuideLibrary({
         </section>
         <h2>함께 읽어보세요</h2>
         <div className="guide-grid">
-          {publishedGuides
+          {articles
             .filter((g) => g.slug !== slug)
             .slice(0, 2)
             .map((g) => (
@@ -80,7 +100,7 @@ export default function GuideLibrary({
         </div>
       </article>
     );
-  const filtered = publishedGuides.filter(
+  const filtered = articles.filter(
     (g) =>
       (category === "전체" || g.category === category) &&
       (g.title + g.intro + g.category).includes(query.trim()),
@@ -103,7 +123,12 @@ export default function GuideLibrary({
         />
       </label>
       <div className="service-filter" aria-label="가이드 카테고리">
-        {["전체", ...categories.filter((c) => c !== "기타")].map((c) => (
+        {[
+          "전체",
+          ...Array.from(
+            new Set([...categories, ...articles.map((g) => g.category)]),
+          ),
+        ].map((c) => (
           <button
             aria-pressed={category === c}
             key={c}

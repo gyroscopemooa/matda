@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import ProfileAvatar, { Avatar } from "./profile-avatar";
 import RotatingBrand from "./rotating-brand";
+import GuideAdmin from "./guide-admin";
 import GuideLibrary from "./guide-library";
 import { publishedGuides, type Guide } from "@/lib/guides";
 import RotatingWelcome from "./rotating-welcome";
@@ -83,6 +84,7 @@ type Snapshot = {
   }[];
 };
 type Field = {
+  sector?: string;
   serviceMode?: string;
   category?: string;
   biz?: boolean;
@@ -111,6 +113,7 @@ function FieldInput({ field }: { field: Field }) {
         value={field.value}
         category={field.category}
         biz={field.biz}
+        sector={field.sector}
       />
     );
   if (field.key === "scheduleMode")
@@ -160,7 +163,11 @@ function FieldInput({ field }: { field: Field }) {
     </label>
   );
 }
-export default function Workspace() {
+export default function Workspace({
+  initialGuides = publishedGuides,
+}: {
+  initialGuides?: Guide[];
+}) {
   const path = usePathname();
   const router = useRouter();
   const biz = path.startsWith("/biz");
@@ -196,6 +203,12 @@ export default function Workspace() {
     localStorage.setItem("matda-service-filter", value);
   }
   const [category, setCategory] = useState("전체");
+  const [sectorFilter, setSectorFilter] = useState("all");
+  const feedCategories = biz
+    ? businessCategories
+    : sectorFilter === "business"
+      ? [...categories, ...businessCategories]
+      : categories;
   const [type, setType] = useState("전체");
   const [modal, setModal] = useState<null | {
     title: string;
@@ -376,7 +389,19 @@ export default function Workspace() {
           key: "type",
           label: "글 종류",
           options: ["해줘요", "질문", "후기", "자유"],
-          value: existing ? typeLabel(existing.type) : "해줘요",
+          value:
+            existing?.communityPurpose === "introduction"
+              ? "업체 소개"
+              : existing
+                ? typeLabel(existing.type)
+                : "해줘요",
+          sector: str(
+            existing?.communitySector ||
+              (businessCategories.includes(guide?.category || "") ||
+              sectorFilter === "business"
+                ? "business"
+                : "personal"),
+          ),
           category: str(
             existing?.category ||
               guide?.category ||
@@ -451,9 +476,15 @@ export default function Workspace() {
         const result = await action(existing ? "post.update" : "post.create", {
           ...values,
           id: existing?.id,
-          type: Object.entries(postTypes).find(
-            ([, v]) => v === values.type,
-          )?.[0],
+          communitySector: values.communitySector,
+          communityPurpose:
+            values.type === "업체 소개" ? "introduction" : "general",
+          type:
+            values.type === "업체 소개"
+              ? "free"
+              : Object.entries(postTypes).find(
+                  ([, v]) => v === values.type,
+                )?.[0],
           quoteEnabled: flags.quotes && values.quoteEnabled === "견적 받기",
           audience: biz ? "business" : "consumer",
           orgId: rows
@@ -539,11 +570,18 @@ export default function Workspace() {
         r.kind === "post" &&
         r.status === "published" &&
         r.audience === (biz ? "business" : "consumer") &&
+        (biz ||
+          sectorFilter === "all" ||
+          (r.communitySector || "personal") === sectorFilter) &&
+        (r.communityPurpose !== "introduction" || type === "업체 소개") &&
         (category === "전체" || r.category === category) &&
         (biz
           ? matchesRegion(str(r.region), region)
           : matchesService(r, serviceFilter, region)) &&
-        (type === "전체" || typeLabel(r.type) === type) &&
+        (type === "전체" ||
+          (type === "업체 소개"
+            ? r.communityPurpose === "introduction"
+            : typeLabel(r.type) === type)) &&
         (!path.startsWith("/quotes") || r.quoteEnabled) &&
         [r.title, r.body, r.category, r.region]
           .join(" ")
@@ -593,7 +631,11 @@ export default function Workspace() {
       <article className="post-card" key={post.id}>
         <div className="post-top">
           <span className={"badge " + str(post.type)}>
-            {typeLabel(post.type)}
+            {post.communityPurpose === "introduction"
+              ? "업체 소개"
+              : post.communitySector === "business" && post.type === "request"
+                ? "업체 구함"
+                : typeLabel(post.type)}
           </span>
           <span className="muted">
             {post.sample ? "예시 이야기" : date(post.createdAt)}
@@ -749,6 +791,27 @@ export default function Workspace() {
             )}
           </div>
         )}
+        {!biz && (
+          <div className="service-filter" aria-label="커뮤니티 영역">
+            {[
+              ["all", "전체"],
+              ["personal", "생활·개인"],
+              ["business", "사업자·업체"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                aria-pressed={sectorFilter === value}
+                onClick={() => {
+                  setSectorFilter(value);
+                  setCategory("전체");
+                  setType("전체");
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="searchbar">
           <Search size={20} />
           <input
@@ -768,7 +831,7 @@ export default function Workspace() {
           )}
         </div>
         <div className="mobile-categories">
-          {["전체", ...(biz ? businessCategories : categories)].map((c) => (
+          {["전체", ...feedCategories].map((c) => (
             <button
               key={c}
               className={category === c ? "selected" : ""}
@@ -779,7 +842,14 @@ export default function Workspace() {
           ))}
         </div>
         <div className="feed-tabs">
-          {["전체", "해줘요", "질문", "후기", "자유"].map((t) => (
+          {[
+            "전체",
+            "해줘요",
+            "질문",
+            "후기",
+            "자유",
+            ...(sectorFilter === "business" ? ["업체 소개"] : []),
+          ].map((t) => (
             <button
               key={t}
               className={type === t ? "active" : ""}
@@ -801,7 +871,11 @@ export default function Workspace() {
         ? popularPosts(
             rows.filter(
               (r) =>
-                r.kind !== "post" || matchesService(r, serviceFilter, region),
+                r.kind !== "post" ||
+                (r.communityPurpose !== "introduction" &&
+                  (sectorFilter === "all" ||
+                    (r.communitySector || "personal") === sectorFilter) &&
+                  matchesService(r, serviceFilter, region)),
             ),
             serviceFilter === "online" ? "전체 지역" : region,
           )
@@ -978,7 +1052,12 @@ export default function Workspace() {
           <div className="detail-header">
             <div className="detail-classification">
               <span className={"badge " + str(post.type)}>
-                {typeLabel(post.type)}
+                {post.communityPurpose === "introduction"
+                  ? "업체 소개"
+                  : post.communitySector === "business" &&
+                      post.type === "request"
+                    ? "업체 구함"
+                    : typeLabel(post.type)}
               </span>
               <span className="detail-region">
                 <MapPin size={14} />
@@ -2877,6 +2956,7 @@ export default function Workspace() {
     return (
       <>
         <h1>운영 관리</h1>
+        <GuideAdmin />
         <p className="muted">
           게시글·댓글 숨김은 일반 이용자에게 보이지 않게 처리하며 복원할 수
           있습니다.
@@ -3060,7 +3140,7 @@ export default function Workspace() {
     if (!user || guideResume.current) return;
     try {
       const slug = sessionStorage.getItem("haejyo-pending-guide");
-      const guide = publishedGuides.find((g) => g.slug === slug);
+      const guide = initialGuides.find((g) => g.slug === slug);
       if (guide) {
         guideResume.current = true;
         sessionStorage.removeItem("haejyo-pending-guide");
@@ -3074,7 +3154,11 @@ export default function Workspace() {
   }, [user?.id]);
   const content =
     path === "/guides" || path.startsWith("/guides/") ? (
-      <GuideLibrary slug={path.split("/")[2]} onRequest={requestFromGuide} />
+      <GuideLibrary
+        articles={initialGuides}
+        slug={path.split("/")[2]}
+        onRequest={requestFromGuide}
+      />
     ) : selectedPost ? (
       detail(selectedPost)
     ) : path.startsWith("/posts/") ? (
@@ -3287,7 +3371,7 @@ export default function Workspace() {
           <div className="sidebar-label">
             {biz ? "기업 서비스 카테고리" : "어떤 도움이 필요하세요?"}
           </div>
-          {(biz ? businessCategories : categories).map((c, i) => {
+          {feedCategories.map((c, i) => {
             const categoryIcons = biz
               ? bizIcons
               : [Brush, Truck, Wrench, PaintRoller, Car, Monitor, Ellipsis];
@@ -3326,18 +3410,34 @@ export default function Workspace() {
           </div>
         </aside>
         <main id="main">
-          {error ? (
+          {path === "/guides" || path.startsWith("/guides/") ? (
+            content
+          ) : error ? (
             <section className="panel empty" role="alert">
               <h2>불러오지 못했어요</h2>
               <p>{error}</p>
               <button onClick={refresh}>다시 시도</button>
             </section>
           ) : loading ? (
-            <div className="skeleton" aria-label="불러오는 중" aria-busy="true">
-              {[1, 2, 3].map((n) => (
-                <div key={n} />
-              ))}
-            </div>
+            <>
+              <section className="welcome">
+                <h1>필요한 일이 있나요? 일단 올려죠.</h1>
+                <p>
+                  해죠, 해줘, 해주세요. 청소부터 웹·앱 제작, 사업장 관리까지
+                  필요한 일을 묻고 맡길 사람을 찾아보세요.
+                </p>
+                <Link href="/guides">해죠 가이드에서 요청 준비하기 →</Link>
+              </section>
+              <div
+                className="skeleton"
+                aria-label="불러오는 중"
+                aria-busy="true"
+              >
+                {[1, 2, 3].map((n) => (
+                  <div key={n} />
+                ))}
+              </div>
+            </>
           ) : (
             content
           )}

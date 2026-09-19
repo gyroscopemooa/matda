@@ -19,6 +19,7 @@
     }
   ],
   "vars": {
+    "SEARCH_INDEXING_ENABLED": "true",
     "DATA_ADAPTER": "supabase",
     "MEDIA_STORAGE_PROVIDER": "supabase",
     "NEXT_PUBLIC_RELEASE_PHASE": "1",

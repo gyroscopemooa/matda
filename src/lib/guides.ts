@@ -1,4 +1,6 @@
 export type Guide = {
+  sections?: { heading: string; body: string }[];
+  sources?: string[];
   slug: string;
   category: string;
   title: string;

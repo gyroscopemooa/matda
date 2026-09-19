@@ -320,12 +320,25 @@ export function act(
           ? required(input.category, "카테고리", 80)
           : String(input.category || ""),
       );
+      const communitySector =
+        input.communitySector === "business" ? "business" : "personal";
+      const communityPurpose =
+        input.communityPurpose === "introduction" ? "introduction" : "general";
+      if (
+        communityPurpose === "introduction" &&
+        (communitySector !== "business" || type !== "free")
+      )
+        throw new AppError("업체 소개는 사업자·업체 영역에서 작성해주세요.");
       const audience = input.audience === "business" ? "business" : "consumer";
       if (
         category &&
-        !(audience === "business" ? businessCategories : categories).includes(
-          category,
-        )
+        !(
+          audience === "business"
+            ? businessCategories
+            : communitySector === "business"
+              ? [...categories, ...businessCategories]
+              : categories
+        ).includes(category)
       )
         throw new AppError("카테고리를 선택해주세요.");
       if (!["request", "question", "review", "free"].includes(type))
@@ -383,6 +396,8 @@ export function act(
         category,
         type,
         audience,
+        communitySector,
+        communityPurpose,
         orgId: audience === "business" ? input.orgId : null,
         quoteEnabled,
         images,

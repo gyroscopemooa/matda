@@ -115,3 +115,6 @@ service-role key는 필요하지 않는다. 일반 요청은 인증된 사용자
 ## 운영팀 샘플 2개 등록
 Supabase SQL Editor에서 supabase/migrations/0010_sample_posts.sql 실행. jeonmeensoo@gmail.com의 인증된 관리자 계정이 필요하다. 청소·관리/제작·디지털 샘플 각 1개를 추가하며 기존 글은 변경하지 않는다. 재실행해도 중복 생성되지 않는다. 적용 전에는 새 샘플이 보이지 않는다.
 
+
+## 가이드 자동 초안·검색·사업자 영역
+0011_guides_business.sql 실행 후 docs/GUIDE_SEO_BUSINESS_SETUP.md 순서대로 서버 Secret과 별도 예약 Worker 설정. 검색은 배포 설정에서 홈/공개 가이드만 허용하며 Google/네이버 소유권 확인·사이트맵 제출은 별도 필요. 실제 AI 호출과 매일 실행은 아직 설정 전이다.
