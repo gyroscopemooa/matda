@@ -7,7 +7,7 @@ import { supabaseAuth } from "@/lib/supabase-auth";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const target = new URL("/", request.url);
+  const target = new URL("/", process.env.NEXT_PUBLIC_SITE_URL || request.url);
   const code = new URL(request.url).searchParams.get("code");
   if (!code) {
     target.searchParams.set("auth", "google-missing-code");

@@ -2762,10 +2762,12 @@ export default function Workspace() {
             <button className="primary full" disabled={busy}>
               {busy ? "처리 중…" : signup ? "가입하기" : "로그인"}
             </button>
-            <Link className="google-login" href="/auth/google">
+            {/* OAuth requires document navigation, not an RSC fetch or prefetch. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a className="google-login" href="/auth/google">
               <span aria-hidden="true">G</span>
               Google로 계속하기
-            </Link>
+            </a>
             <button
               type="button"
               className="text-button full"

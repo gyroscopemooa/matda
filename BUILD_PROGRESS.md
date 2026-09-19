@@ -7,6 +7,8 @@
 
 ## 2026-09-20 — Supabase Google OAuth 시작 연결
 
+- 콜백 실패 로그의 `AuthRetryableFetchError`를 조사해 제한 환경의 Node 외부 통신이 `EACCES`로 차단되는 것을 확인했다. 3107 미리보기 서버를 외부 연결 가능한 권한으로 재시작했다. OAuth 버튼은 RSC 요청을 발생시키는 Link 대신 문서 이동을 사용하며, 콜백 복귀 주소도 설정된 사이트 origin으로 통일했다. 실제 Google 로그인 완료는 사용자 재시도 확인 대기.
+
 - 사용자 생성 Supabase 프로젝트에 공개키 기반 Auth 연결을 추가했다. Google Provider 활성화와 `127.0.0.1:3107/auth/callback` 허용 주소는 사용자 설정으로 확인했다.
 - `/auth/google`은 Supabase PKCE OAuth 시작 주소와 code-verifier 쿠키를 만들고, `/auth/callback`은 인증된 Google 이메일을 현재 로컬 개발 계정과 연결한다.
 - 이 단계는 게시글·댓글·채팅의 Supabase DB 저장 전환이 아니다. 앱의 거래 데이터는 여전히 local adapter이며, 실제 서비스 출시 조건은 충족하지 않았다.
