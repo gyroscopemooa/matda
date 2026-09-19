@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-test("Desktop province-wide posts, optional district/town and full-ratio detail photos", async ({
+test("Desktop province-wide posts, optional district/town and square detail photos", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -80,10 +80,8 @@ test("Desktop province-wide posts, optional district/town and full-ratio detail 
         nw: image.naturalWidth,
         nh: image.naturalHeight,
       }));
-      expect(sizes.w).toBeGreaterThan(width === 1440 ? 600 : 250);
-      expect(Math.abs(sizes.w / sizes.h - sizes.nw / sizes.nh)).toBeLessThan(
-        0.01,
-      );
+      expect(sizes.w).toBeGreaterThan(width === 1440 ? 250 : 120);
+      expect(Math.abs(sizes.w - sizes.h)).toBeLessThanOrEqual(1);
     }
     const title = await page.locator(".detail-title").boundingBox();
     const titleHeight = await page

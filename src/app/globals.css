@@ -969,24 +969,32 @@ main {
   overflow-wrap: anywhere;
 }
 .photo-strip.post-gallery {
-  flex-direction: column;
-  gap: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 960px;
   overflow: visible;
   margin: 20px 0;
 }
 .post-gallery a {
   display: block;
   width: 100%;
-  max-width: 720px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 12px;
 }
 .photo-strip.post-gallery img {
   display: block;
   width: 100%;
-  height: auto;
-  object-fit: contain;
+  height: 100%;
+  object-fit: cover;
   border-radius: 12px;
 }
 @media (max-width: 600px) {
+  .photo-strip.post-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
   .detail-header {
     gap: 12px;
   }
