@@ -2917,8 +2917,13 @@ export default function Workspace() {
               )}
             </div>
             {user ? (
-              <Link className="user-chip" href="/my">
-                {user.name.slice(0, 2)}
+              <Link
+                className="user-chip"
+                href="/my"
+                aria-label={`${user.name} 마이페이지`}
+                title={`${user.name} 마이페이지`}
+              >
+                <Avatar value={user.avatar} />
               </Link>
             ) : (
               <button

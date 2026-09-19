@@ -12,7 +12,7 @@ test("Digital requests work without region and remain discoverable across local 
   });
   await page.goto("/");
   await expect(
-    page.getByRole("link", { name: "디지", exact: true }),
+    page.getByRole("link", { name: "디지털요청자 마이페이지", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "필요한 일이 있나요? 일단 올려죠." }),
