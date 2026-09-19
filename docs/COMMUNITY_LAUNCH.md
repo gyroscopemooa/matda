@@ -1,5 +1,7 @@
 # Phase 1 공개 연결 안내
 
+> 최신 선택: 호스팅은 Cloudflare Workers, 사진은 Supabase Storage. 아래 과거 R2/Vercel 안내보다 [Cloudflare 배포 안내](CLOUDFLARE_DEPLOY.md)를 우선한다. DB/Storage SQL 적용 및 원격 미리보기 전환 완료. 실제 도메인 배포는 미완료.
+
 2026-09-20: 원격 연결 코드와 로컬 자동 검증을 준비했다. 실제 Supabase 업그레이드, R2 계정 연결, 호스팅/DNS 적용 및 운영 환경 테스트는 완료되지 않았다. 기존 `npm run preview`는 로컬 데이터를 유지한다.
 
 ## 1. Supabase DB 업그레이드
@@ -96,3 +98,4 @@ service-role key는 필요하지 않는다. 일반 요청은 인증된 사용자
 
 ## 2026-09-20 Storage SQL 원격 반영 확인
 사용자 성공 보고 후 공개 이미지 RPC community_public_image를 비로그인으로 호출하여 정상 응답/존재하지 않는 ID의 빈 결과 확인. profiles/posts/comments 스키마 정상, media 직접 조회는 비로그인 권한 차단(42501). migration0007의 RPC 배포 확인이며 실제 이미지 업로드·소유자 삭제·사진 표시 실검증 완료를 의미하지 않는다. 현재 앱은 local adapter 유지. 다음 작업은 원격 모드에서 로그인 및 사진 업로드 검증이다.
+

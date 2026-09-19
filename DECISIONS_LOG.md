@@ -131,3 +131,7 @@
 
 ## 2026-09-20 Supabase Storage 전환 준비
 사용자가 community-images 버킷 생성 보고. 기본 사진 저장소를 Supabase Storage로 변경하며 R2 코드는 MEDIA_STORAGE_PROVIDER=r2로 유지. 파일별 storage_provider를 기록하여 기존 R2 사진은 R2로 조회한다. 공개 사진 리다이렉트는 공개 메타데이터 전용 RPC를 사용한다. 사진 2MiB 제한, JWT로 본인 경로 업로드/삭제, 업로드 metadata 실패 시 파일 정리. migration 0007_supabase_storage.sql을 SQL Editor에서 한 번 적용해야 한다(통합 UPGRADE_COMMUNITY 재실행 금지). 실제 원격 업로드는 SQL 적용 및 로그인 연결 후 검증해야 한다. local adapter는 유지했다. 28개 단위/DB 테스트에 Storage 소유자 격리·삭제 권한 및 새 SQL 검증 포함, 통과.
+
+## 2026-09-20 Cloudflare Workers 배포 준비
+사용자 선택에 따라 Workers + OpenNext 설정과 Git 빌드 명령 추가. 사진/인증/DB는 Supabase 유지. Next production build 통과, Windows OpenNext 최종 번들은 symlink EPERM으로 실패하여 Workers 실행 검증은 미완료. Cloudflare Linux Git build/deploy가 다음 단계. .env 파일 포함 빌드를 차단하여 로컬 설정 번들 유출 예방. 실제 배포/DNS 변경 없음. docs/CLOUDFLARE_DEPLOY.md 참조.
+

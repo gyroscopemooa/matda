@@ -9,7 +9,13 @@ playwright-report/
 
 .next-e2e/
 .next-build/
+.next-cloudflare/
 .vercel/
 
 docs/*.png
 *.log
+
+.open-next/
+.wrangler/
+.dev.vars*
+cloudflare-env.d.ts

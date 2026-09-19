@@ -259,3 +259,7 @@
 
 ## 2026-09-20 헤더 프로필 이미지
 헤더 MY 링크를 닉네임 앞2글자에서 공통 Avatar로 변경. 업로드 사진 또는 선택한 기본 아바타 표시, 접근성 이름과 툴팁은 닉네임+마이페이지.
+
+## 2026-09-20 Cloudflare Workers 배포 준비
+사용자 선택에 따라 Workers + OpenNext 설정과 Git 빌드 명령 추가. 사진/인증/DB는 Supabase 유지. Next production build 통과, Windows OpenNext 최종 번들은 symlink EPERM으로 실패하여 Workers 실행 검증은 미완료. Cloudflare Linux Git build/deploy가 다음 단계. .env 파일 포함 빌드를 차단하여 로컬 설정 번들 유출 예방. 실제 배포/DNS 변경 없음. docs/CLOUDFLARE_DEPLOY.md 참조.
+

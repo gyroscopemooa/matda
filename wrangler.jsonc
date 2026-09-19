@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "matda",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-20",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "matda"
+    }
+  ],
+  "vars": {
+    "DATA_ADAPTER": "supabase",
+    "MEDIA_STORAGE_PROVIDER": "supabase",
+    "NEXT_PUBLIC_RELEASE_PHASE": "1",
+    "PAYMENTS_ENABLED": "false",
+    "TENDERS_ENABLED": "false",
+    "NEXT_PUBLIC_SITE_URL": "https://matda.net",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://affpkizmmfnmvyexugdu.supabase.co"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
