@@ -50,8 +50,8 @@ export default function ProfileAvatar({ value = "sun" }: { value?: string }) {
             setError("");
             setBusy(true);
             try {
-              if (file.size > 5 * 1024 * 1024)
-                throw new Error("사진은 5MB 이하로 선택해주세요.");
+              if (file.size > 2 * 1024 * 1024)
+                throw new Error("사진은 2MB 이하로 선택해주세요.");
               const bitmap = await createImageBitmap(file);
               const canvas = document.createElement("canvas");
               canvas.width = canvas.height = 512;
@@ -95,7 +95,7 @@ export default function ProfileAvatar({ value = "sun" }: { value?: string }) {
         />
       </label>
       <p>
-        JPG·PNG·WebP, 최대 5MB · 가운데를 정사각형으로 맞춥니다. 저장하면 공개
+        JPG·PNG·WebP, 최대 2MB · 가운데를 정사각형으로 맞춥니다. 저장하면 공개
         프로필에 표시됩니다.
       </p>
       {error && <p role="alert">{error}</p>}

@@ -62,6 +62,8 @@ export async function POST(request: Request) {
             ? bytes.toString("ascii", 0, 4) === "RIFF" &&
               bytes.toString("ascii", 8, 12) === "WEBP"
             : false;
+    if (image && file.size > 2 * 1024 * 1024)
+      throw new AppError("사진은 2MB 이하만 첨부해주세요.");
     const visibility =
       form.get("visibility") === "public" ? "public" : "private";
     if (["png", "jpg", "jpeg", "webp"].includes(ext) && !image)

@@ -35,6 +35,12 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
       await readFile("supabase/migrations/0006_request_categories.sql", "utf8"),
     );
     await db.exec(
+      `create schema storage; create table storage.buckets(id text primary key, public boolean, file_size_limit bigint, allowed_mime_types text[]); insert into storage.buckets(id) values('community-images'); create table storage.objects(id uuid default gen_random_uuid(), bucket_id text, name text, owner_id text); alter table storage.objects enable row level security; grant usage on schema storage to authenticated; grant select,insert,delete on storage.objects to authenticated; create function storage.foldername(text) returns text[] language sql immutable as $$select string_to_array($1,'/')$$;`,
+    );
+    await db.exec(
+      await readFile("supabase/migrations/0007_supabase_storage.sql", "utf8"),
+    );
+    await db.exec(
       `insert into auth.users values('${a}'),('${b}'),('${c}');insert into community_admins values('${c}');`,
     );
     for (const id of [a, b, c]) {
@@ -43,6 +49,23 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
         `insert into profiles(id,display_name) values('${id}','이웃')`,
       );
     }
+    await as(a);
+    await db.exec(
+      `insert into storage.objects(bucket_id,name,owner_id) values('community-images','${a}/${photo}','${a}')`,
+    );
+    await as(b);
+    await assert.rejects(
+      db.exec(
+        `insert into storage.objects(bucket_id,name,owner_id) values('community-images','${a}/another','${b}')`,
+      ),
+      /row-level security/,
+    );
+    assert.equal(await count("storage.objects"), 0);
+    await db.exec(`delete from storage.objects where name='${a}/${photo}'`);
+    await as(a);
+    assert.equal(await count("storage.objects"), 1);
+    await db.exec(`delete from storage.objects where name='${a}/${photo}'`);
+    assert.equal(await count("storage.objects"), 0);
     await as(a);
     await db.exec(
       `insert into posts(author_id,post_type,audience,title,body,region,service_mode,category_id) values('${a}','request','consumer','웹 개발','홈페이지 제작','전국 · 온라인','online','제작·디지털')`,

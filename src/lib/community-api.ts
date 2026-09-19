@@ -1,3 +1,4 @@
+import { storageProvider } from "./community-storage";
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { supabaseAuth } from "./supabase-auth";
@@ -182,15 +183,16 @@ export async function remoteMedia(request: Request) {
     if (request.method === "GET") {
       const id = new URL(request.url).searchParams.get("id");
       const { data, error } = await client
-        .from("media")
-        .select("object_key,visibility")
-        .eq("id", id)
-        .single();
+        .rpc("community_public_image", { target: id })
+        .single<{object_key: string; visibility: string; storage_provider: "r2" | "supabase"}>();
       if (error || !data || data.visibility !== "public")
         throw new AppError("사진을 찾을 수 없습니다.", 404);
-      return NextResponse.redirect(imageUrl(data.object_key), {
-        headers: response.headers,
-      });
+      return NextResponse.redirect(
+        imageUrl(data.object_key, data.storage_provider),
+        {
+          headers: response.headers,
+        },
+      );
     }
     checkOrigin(request);
     const identity = await identityFor(client);
@@ -199,8 +201,8 @@ export async function remoteMedia(request: Request) {
     rateLimit("remote-upload:" + identity.id, 20);
     const form = await request.formData();
     const file = form.get("file");
-    if (!(file instanceof File) || !file.size || file.size > 5 * 1024 * 1024)
-      throw new AppError("사진은 최대 5MB까지 가능합니다.");
+    if (!(file instanceof File) || !file.size || file.size > 2 * 1024 * 1024)
+      throw new AppError("사진은 최대 2MB까지 가능합니다.");
     if (form.get("visibility") !== "public")
       throw new AppError("현재 단계에서는 공개 사진만 지원합니다.");
     const bytes = Buffer.from(await file.arrayBuffer());
@@ -217,18 +219,19 @@ export async function remoteMedia(request: Request) {
     if (!mime) throw new AppError("JPG·PNG·WebP 사진만 가능합니다.");
     const id = randomUUID();
     const key = identity.id + "/" + id;
-    await putImage(key, bytes, mime);
+    await putImage(key, bytes, mime, client);
     const { error } = await client.from("media").insert({
       id,
       owner_id: identity.id,
       object_key: key,
+      storage_provider: storageProvider(),
       visibility: "public",
       mime,
       size: bytes.length,
     });
     if (error) {
       try {
-        await removeImage(key);
+        await removeImage(key, client);
       } catch {
         console.error("Orphan image cleanup required", key);
       }

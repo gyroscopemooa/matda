@@ -87,3 +87,9 @@ service-role key는 필요하지 않는다. 일반 요청은 인증된 사용자
 - 현재 snapshot은 RLS로 읽을 수 있는 데이터를 페이지별로 전부 모은다. 데이터 증가 전 화면별 서버 pagination으로 전환해야 한다. 대규모 서비스 부하 통과를 주장하지 않는다.
 - 서버 요청 제한은 프로세스 메모리 기반이다. 공개 확장 전에 공유 rate limit/봇 차단과 이메일 발송 정책을 별도 검증해야 한다.
 - 자동 테스트 완료만으로 production 출시 승인이나 보안감사 완료를 의미하지 않는다.
+
+## 2026-09-20 원격 DB 업그레이드 반영 확인
+사용자 SQL 실행 후 공개 API 읽기 검증: profiles.avatar/disabled, posts.images/schedule/budget/service_mode, comments.status 조회 성공. consumer 활성 카테고리 6+기타 확인. 통합 SQL 마지막 단계 변경이 반영됨. media 조회는 비로그인 42501 권한 거부이므로 이 경로로 컬럼 검증 불가. 로그인 사용자 media/RLS·채팅 실동작은 추후 검증. R2 변수는 아직 없고 local adapter 유지. 운영 관리자 권한 부여는 별도 미완료.
+
+## 2026-09-20 Supabase Storage 전환 준비
+사용자가 community-images 버킷 생성 보고. 기본 사진 저장소를 Supabase Storage로 변경하며 R2 코드는 MEDIA_STORAGE_PROVIDER=r2로 유지. 파일별 storage_provider를 기록하여 기존 R2 사진은 R2로 조회한다. 공개 사진 리다이렉트는 공개 메타데이터 전용 RPC를 사용한다. 사진 2MiB 제한, JWT로 본인 경로 업로드/삭제, 업로드 metadata 실패 시 파일 정리. migration 0007_supabase_storage.sql을 SQL Editor에서 한 번 적용해야 한다(통합 UPGRADE_COMMUNITY 재실행 금지). 실제 원격 업로드는 SQL 적용 및 로그인 연결 후 검증해야 한다. local adapter는 유지했다. 28개 단위/DB 테스트에 Storage 소유자 격리·삭제 권한 및 새 SQL 검증 포함, 통과.

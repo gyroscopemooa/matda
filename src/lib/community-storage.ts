@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   S3Client,
   PutObjectCommand,
@@ -26,14 +27,43 @@ function settings() {
     }),
   };
 }
-export function imageUrl(key: string) {
+export const storageProvider = () =>
+  process.env.MEDIA_STORAGE_PROVIDER === "r2" ? "r2" : "supabase";
+export function imageUrl(key: string, provider = storageProvider()) {
+  if (provider === "supabase") {
+    if (!/^[0-9a-f-]{36}\/[0-9a-f-]{36}$/i.test(key))
+      throw new AppError("사진 경로 오류", 404);
+    return (
+      process.env.NEXT_PUBLIC_SUPABASE_URL +
+      "/storage/v1/object/public/community-images/" +
+      key
+    );
+  }
   const { origin } = settings();
   // Keys are generated on the server, never supplied URLs or arbitrary paths.
   if (!/^[0-9a-f-]{36}\/[0-9a-f-]{36}$/i.test(key))
     throw new AppError("사진 경로를 확인해주세요.", 404);
   return origin.replace(/\/$/, "") + "/" + key;
 }
-export async function putImage(key: string, bytes: Buffer, mime: string) {
+export async function putImage(
+  key: string,
+  bytes: Buffer,
+  mime: string,
+  supabase?: SupabaseClient,
+) {
+  if (storageProvider() === "supabase") {
+    if (!supabase) throw new AppError("로그인이 필요합니다.", 401);
+    const { error } = await supabase.storage
+      .from("community-images")
+      .upload(key, bytes, {
+        contentType: mime,
+        cacheControl: "3600",
+        upsert: false,
+      });
+    if (error)
+      throw new AppError("사진 업로드 실패: 저장소 권한을 확인해주세요.", 503);
+    return;
+  }
   const { client, bucket } = settings();
   try {
     await client.send(
@@ -51,7 +81,15 @@ export async function putImage(key: string, bytes: Buffer, mime: string) {
     client.destroy();
   }
 }
-export async function removeImage(key: string) {
+export async function removeImage(key: string, supabase?: SupabaseClient) {
+  if (storageProvider() === "supabase") {
+    if (!supabase) throw new AppError("로그인이 필요합니다.", 401);
+    const { error } = await supabase.storage
+      .from("community-images")
+      .remove([key]);
+    if (error) throw new AppError("사진 정리에 실패했습니다.", 503);
+    return;
+  }
   const { client, bucket } = settings();
   try {
     await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));

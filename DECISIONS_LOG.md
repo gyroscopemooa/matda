@@ -128,3 +128,6 @@
 
 ## 2026-09-20 향후 플랫폼 및 가이드 운영 계획
 민간 견적 단계에서 해줘요를 견적 요청으로 통합하고 커뮤니티 질문/후기를 보조 영역으로 유지한다. 이번에는 문서만 저장. 상세: docs/CONSUMER_PLATFORM_TRANSITION.md. 가이드는 팁·노하우 중심으로 일상 관리 주제를 확대하고 분쟁/법률은 공식 근거 검토 후 간헐 발행한다. 상세: docs/GUIDE_EDITORIAL.md.
+
+## 2026-09-20 Supabase Storage 전환 준비
+사용자가 community-images 버킷 생성 보고. 기본 사진 저장소를 Supabase Storage로 변경하며 R2 코드는 MEDIA_STORAGE_PROVIDER=r2로 유지. 파일별 storage_provider를 기록하여 기존 R2 사진은 R2로 조회한다. 공개 사진 리다이렉트는 공개 메타데이터 전용 RPC를 사용한다. 사진 2MiB 제한, JWT로 본인 경로 업로드/삭제, 업로드 metadata 실패 시 파일 정리. migration 0007_supabase_storage.sql을 SQL Editor에서 한 번 적용해야 한다(통합 UPGRADE_COMMUNITY 재실행 금지). 실제 원격 업로드는 SQL 적용 및 로그인 연결 후 검증해야 한다. local adapter는 유지했다. 28개 단위/DB 테스트에 Storage 소유자 격리·삭제 권한 및 새 SQL 검증 포함, 통과.
