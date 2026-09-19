@@ -170,6 +170,7 @@ export default function Workspace() {
   });
   const [loading, setLoading] = useState(true);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [myActivity, setMyActivity] = useState<"posts" | "comments">("posts");
   const [welcomeMeme, setWelcomeMeme] = useState(false);
   const welcomeInitialized = useRef(false);
   useEffect(() => {
@@ -1557,10 +1558,35 @@ export default function Workspace() {
           </Link>
         )}
         <div className="stats">
-          <div>
-            <b>{own("post").length}</b>
+          <button
+            type="button"
+            aria-pressed={myActivity === "posts"}
+            onClick={() => setMyActivity("posts")}
+          >
+            <b>{own("post").filter((p) => p.status === "published").length}</b>
             <span>내가 쓴 글</span>
-          </div>
+          </button>
+          <button
+            type="button"
+            aria-pressed={myActivity === "comments"}
+            onClick={() => setMyActivity("comments")}
+          >
+            <b>
+              {
+                own("comment").filter(
+                  (c) =>
+                    c.status !== "hidden" &&
+                    rows.some(
+                      (p) =>
+                        p.kind === "post" &&
+                        p.id === c.postId &&
+                        p.status === "published",
+                    ),
+                ).length
+              }
+            </b>
+            <span>내가 쓴 댓글</span>
+          </button>
           {flags.quotes && (
             <div>
               <b>{own("quote").length}</b>
@@ -1814,13 +1840,50 @@ export default function Workspace() {
             )}
           </section>
         )}
-        <h2>내가 쓴 글</h2>
+        <h2>{myActivity === "posts" ? "내가 쓴 글" : "내가 쓴 댓글"}</h2>
         <div className="feed">
-          {own("post").filter((p) => p.status === "published").length
-            ? own("post")
-                .filter((p) => p.status === "published")
-                .map(card)
-            : empty()}
+          {myActivity === "comments"
+            ? (() => {
+                const comments = own("comment")
+                  .filter(
+                    (c) =>
+                      c.status !== "hidden" &&
+                      rows.some(
+                        (p) =>
+                          p.kind === "post" &&
+                          p.id === c.postId &&
+                          p.status === "published",
+                      ),
+                  )
+                  .sort(
+                    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+                  );
+                return comments.length
+                  ? comments.map((c) => (
+                      <Link
+                        className="panel my-comment"
+                        key={c.id}
+                        href={`/posts/${c.postId}#comments`}
+                      >
+                        <small className="muted">
+                          {str(rows.find((p) => p.id === c.postId)?.title)}
+                        </small>
+                        <p>{str(c.body)}</p>
+                        <small className="muted">
+                          {date(c.createdAt)} · 글에서 댓글 보기 →
+                        </small>
+                      </Link>
+                    ))
+                  : empty(
+                      "아직 작성한 댓글이 없어요",
+                      "궁금한 글에 댓글을 남겨보세요.",
+                    );
+              })()
+            : own("post").filter((p) => p.status === "published").length
+              ? own("post")
+                  .filter((p) => p.status === "published")
+                  .map(card)
+              : empty()}
         </div>
       </>
     );
