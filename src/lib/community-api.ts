@@ -79,6 +79,12 @@ export async function remoteAuth(request?: Request) {
     }
     checkOrigin(request);
     const data = await request.json();
+    if (data.action !== "logout") {
+      throw new AppError(
+        "현재 Google 로그인만 지원합니다. Google로 계속하기를 이용해주세요.",
+        403,
+      );
+    }
     if (data.action === "logout") {
       const { error } = await client.auth.signOut({ scope: "local" });
       if (error)
@@ -184,7 +190,11 @@ export async function remoteMedia(request: Request) {
       const id = new URL(request.url).searchParams.get("id");
       const { data, error } = await client
         .rpc("community_public_image", { target: id })
-        .single<{object_key: string; visibility: string; storage_provider: "r2" | "supabase"}>();
+        .single<{
+          object_key: string;
+          visibility: string;
+          storage_provider: "r2" | "supabase";
+        }>();
       if (error || !data || data.visibility !== "public")
         throw new AppError("사진을 찾을 수 없습니다.", 404);
       return NextResponse.redirect(

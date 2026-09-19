@@ -283,3 +283,7 @@ PC 목록 약 5개 높이(510px), 모바일 약 3개 높이에서 독립 스크�
 ## 2026-09-20 공개 화면 관리자 삭제
 관리자 전용 삭제 버튼을 글 카드/상세/댓글에 추가. 기존 admin.moderate 권한 검증/숨김/감사 경로 사용, 확인 후 숨김 및 대시보드 복원 가능. 숨김 댓글은 공개 화면/카드 댓글 수에서 제외. 일반계정 버튼 미노출 및 2계정 실제 UI 삭제 확인 E2E 통과, 타입/린트 통과. SQL 추가 없음.
 
+
+## 2026-09-20 Google 전용 로그인
+운영 Supabase 로그인 UI는 Google 버튼만 표시. 이메일 signup/login/reset/update-password API는403 차단, logout/세션조회/Google OAuth 유지. 초기 로딩 중 이메일 폼 노출 방지. 기존 사용자/게시물 삭제 없음. 격리된 local adapter의 테스트 가입은 유지. 원격 모드 로컬 UI와4개 API403 검증, 타입/린트 통과. Supabase Sign In/Providers의 Email Provider 비활성화는 사용자 설정 필요.
+

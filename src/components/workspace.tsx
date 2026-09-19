@@ -166,7 +166,7 @@ export default function Workspace() {
   const [data, setData] = useState<Snapshot>({
     user: null,
     rows: [],
-    mode: "local",
+    mode: "",
   });
   const [loading, setLoading] = useState(true);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -3396,7 +3396,21 @@ export default function Workspace() {
             {toast}
           </p>
         )}
-        {authOpen ? (
+        {authOpen && data.mode !== "local" ? (
+          <div>
+            <p className="muted">Google 계정으로 가입하고 로그인하세요.</p>
+            {/* OAuth requires full document navigation. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a className="google-login" href="/auth/google">
+              <span aria-hidden="true">G</span>
+              Google로 계속하기
+            </a>
+            <p className="muted small">
+              처음 이용하시면 계정이 생성됩니다. 닉네임과 프로필은 가입 후
+              변경할 수 있어요.
+            </p>
+          </div>
+        ) : authOpen ? (
           <form
             onSubmit={async (e) => {
               e.preventDefault();
