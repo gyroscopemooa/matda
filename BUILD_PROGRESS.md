@@ -5,6 +5,13 @@
 이전 55/55 및 100% 표시는 대표 흐름 위주의 기록으로, 지역 계층 선택 누락을 반영하지 못했다. 전체 완성률로 사용하지 않는다. 현재 공개 범위는 Phase 1이며 기능별 검증 근거로 관리한다.
 공개 출시: **미완료**. 외부 어댑터 개발·서비스 연결·staging 검증은 별도이며 아래 완료 체크에 포함하지 않는다.
 
+## 2026-09-20 — Supabase Google OAuth 시작 연결
+
+- 사용자 생성 Supabase 프로젝트에 공개키 기반 Auth 연결을 추가했다. Google Provider 활성화와 `127.0.0.1:3107/auth/callback` 허용 주소는 사용자 설정으로 확인했다.
+- `/auth/google`은 Supabase PKCE OAuth 시작 주소와 code-verifier 쿠키를 만들고, `/auth/callback`은 인증된 Google 이메일을 현재 로컬 개발 계정과 연결한다.
+- 이 단계는 게시글·댓글·채팅의 Supabase DB 저장 전환이 아니다. 앱의 거래 데이터는 여전히 local adapter이며, 실제 서비스 출시 조건은 충족하지 않았다.
+- 검증: OAuth 시작 E2E 통과, lint/typecheck/build 통과. 실제 Google 계정 선택과 콜백은 사용자 브라우저에서 최종 확인 필요.
+
 ## 완료 판정 범위
 별도 첨부 MASTER_PROMPT.md의 mock/feature flag 허용 원칙을 적용했다. 체크 표시는 로컬 구현과 자동화된 대표 흐름 검증을 의미한다. 각 화면의 모든 입력 조합, 모든 브라우저, 실제 외부 서비스까지 전수 검증했다는 뜻은 아니다. 단계별 10가지 상태 검증 근거와 한계는 docs/QA_REPORT.md에 기록했다.
 브랜드: 해죠 / MATDA BIZ (작업명). 기존 코드가 없는 작업 폴더에서 구축. Git 저장소/커밋은 없음.
@@ -150,3 +157,14 @@
 - 사용자 지정 원격: https://github.com/gyroscopemooa/matda.git (초기 조회 시 비어 있음). 사용자 커밋/푸시 승인에 따라 첫 버전 관리 준비.
 - .env 실제값, .local 회원/첨부 데이터, node_modules, Next 빌드, 테스트 보고서 및 docs 테스트 캡처는 추적 제외. .env.example은 빈 연결키만 포함.
 - 다음 작업은 생성된 Supabase 프로젝트에 실제 Auth/DB 어댑터 연결. 이번 Git 업로드는 배포 또는 Supabase 연결 완료를 의미하지 않음.
+
+## Supabase 프로젝트 연결 준비 및 실접근 확인
+- 사용자 제공 프로젝트 URL과 publishable key를 Git 제외 .env.local에 저장. 키 값은 상태문서에 기록하지 않음.
+- Auth settings 읽기 HTTP 200 확인: 이메일 활성, Google 비활성. profiles 읽기는 PGRST205(테이블 schema cache 미존재). 전체 DB가 비어 있다고 단정하지 않음.
+- 기존 0001~0003 migration을 단일 트랜잭션으로 묶은 supabase/SETUP_DATABASE.sql 준비. 원격 SQL 적용은 아직 하지 않음.
+- 공개용 키는 관리자 SQL 권한이 없으므로 SQL Editor에서 초기 구조 적용 필요. 기존 테이블을 덮어쓰지 않고 충돌 시 전체 롤백.
+- 앱은 여전히 local adapter 사용. Auth/DB 실제 어댑터 연결 및 구글 OAuth 설정이 남아 있음. 키 접근 성공을 서비스 연동 완료로 표시하지 않음.
+
+## Supabase 초기 SQL 원격 적용 확인
+- 사용자 SQL Editor 실행 성공 보고 후 공개키로 profiles/posts/comments/platform_settings 조회(limit=0) HTTP 200 확인. conversations는 비로그인 권한 거절(42501)로 공개 차단 확인.
+- 로그인 사용자별 RLS 검증이나 실제 앱 저장 전환 완료를 의미하지 않는다. 앱은 local adapter 상태이며 Supabase Auth/DB adapter 구현과 OAuth 설정이 남아 있다.

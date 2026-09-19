@@ -2,6 +2,12 @@
 
 > 요구사항이 바뀔 때 삭제하지 말고 새 항목을 추가한다.
 
+## 2026-09-20 — Google OAuth 시작 연결
+- Google OAuth는 Supabase Auth Provider를 사용한다. 프로젝트 공개키와 URL은 Git 제외 `.env.local`에만 저장한다.
+- OAuth 시작/콜백에는 PKCE를 사용하고, nonce 검사 및 이메일 없는 계정은 허용하지 않는다.
+- 콜백 주소는 `NEXT_PUBLIC_SITE_URL`에서 만들어 개발 주소가 Next 개발 서버의 localhost 정규화에 의해 달라지지 않도록 한다.
+- Google 인증 계정은 현 단계에서 로컬 개발 저장소의 사용자와 연결된다. 데이터 저장의 Supabase 전환 전에는 공개 출시로 표시하지 않는다.
+
 ## 2026-09 — 핵심 제품 결정
 - 커뮤니티 → 민간견적 → 업체찾기 → B2B로 연속 확장한다.
 - 커뮤니티가 활성화되지 않아도 기본 로드맵 개발은 계속한다.
@@ -90,3 +96,14 @@
 - 사용자 지정 원격: https://github.com/gyroscopemooa/matda.git (초기 조회 시 비어 있음). 사용자 커밋/푸시 승인에 따라 첫 버전 관리 준비.
 - .env 실제값, .local 회원/첨부 데이터, node_modules, Next 빌드, 테스트 보고서 및 docs 테스트 캡처는 추적 제외. .env.example은 빈 연결키만 포함.
 - 다음 작업은 생성된 Supabase 프로젝트에 실제 Auth/DB 어댑터 연결. 이번 Git 업로드는 배포 또는 Supabase 연결 완료를 의미하지 않음.
+
+## Supabase 프로젝트 연결 준비 및 실접근 확인
+- 사용자 제공 프로젝트 URL과 publishable key를 Git 제외 .env.local에 저장. 키 값은 상태문서에 기록하지 않음.
+- Auth settings 읽기 HTTP 200 확인: 이메일 활성, Google 비활성. profiles 읽기는 PGRST205(테이블 schema cache 미존재). 전체 DB가 비어 있다고 단정하지 않음.
+- 기존 0001~0003 migration을 단일 트랜잭션으로 묶은 supabase/SETUP_DATABASE.sql 준비. 원격 SQL 적용은 아직 하지 않음.
+- 공개용 키는 관리자 SQL 권한이 없으므로 SQL Editor에서 초기 구조 적용 필요. 기존 테이블을 덮어쓰지 않고 충돌 시 전체 롤백.
+- 앱은 여전히 local adapter 사용. Auth/DB 실제 어댑터 연결 및 구글 OAuth 설정이 남아 있음. 키 접근 성공을 서비스 연동 완료로 표시하지 않음.
+
+## Supabase 초기 SQL 원격 적용 확인
+- 사용자 SQL Editor 실행 성공 보고 후 공개키로 profiles/posts/comments/platform_settings 조회(limit=0) HTTP 200 확인. conversations는 비로그인 권한 거절(42501)로 공개 차단 확인.
+- 로그인 사용자별 RLS 검증이나 실제 앱 저장 전환 완료를 의미하지 않는다. 앱은 local adapter 상태이며 Supabase Auth/DB adapter 구현과 OAuth 설정이 남아 있다.

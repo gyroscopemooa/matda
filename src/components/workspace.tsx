@@ -209,6 +209,13 @@ export default function Workspace() {
     return () => clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get("auth");
+    if (status === "google-failed" || status === "google-unavailable")
+      setToast(
+        "Google 로그인을 완료하지 못했습니다. 잠시 후 다시 시도해주세요.",
+      );
+  }, []);
+  useEffect(() => {
     if (modal || authOpen) dialogRef.current?.showModal();
     else dialogRef.current?.close();
   }, [modal, authOpen]);
@@ -2750,6 +2757,10 @@ export default function Workspace() {
             <button className="primary full" disabled={busy}>
               {busy ? "처리 중…" : signup ? "가입하기" : "로그인"}
             </button>
+            <Link className="google-login" href="/auth/google">
+              <span aria-hidden="true">G</span>
+              Google로 계속하기
+            </Link>
             <button
               type="button"
               className="text-button full"
@@ -2760,8 +2771,8 @@ export default function Workspace() {
                 : "처음이신가요? 회원가입"}
             </button>
             <p className="muted small">
-              현재 로컬 테스트 환경입니다. 실사용 비밀번호나 개인정보를 입력하지
-              마세요.
+              Google 로그인은 Supabase Auth로 인증합니다. 게시글 데이터 연결은
+              준비 중입니다.
             </p>
           </form>
         ) : (

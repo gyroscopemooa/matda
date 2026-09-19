@@ -1855,3 +1855,28 @@ button.region-picker span {
   background: #f0edff;
   color: #6853a5;
 }
+.google-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  margin: 10px 0;
+  border: 1px solid #dce3ec;
+  border-radius: 10px;
+  color: #23334d;
+  font-weight: 650;
+  background: #fff;
+}
+.google-login span {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #fff;
+  background: #4285f4;
+  font-weight: 800;
+  font-size: 13px;
+}

@@ -25,7 +25,9 @@ test("Postgres migration: RLS private quotes/chat/org/sealed bid, denied writes 
     await db.exec(
       await readFile("supabase/migrations/0002_transactional_rpc.sql", "utf8"),
     );
-    await db.exec(await readFile("supabase/migrations/0003_free_post_type.sql", "utf8"));
+    await db.exec(
+      await readFile("supabase/migrations/0003_free_post_type.sql", "utf8"),
+    );
     await db.exec(
       `insert into auth.users values('${ids.a}'),('${ids.b}'),('${ids.c}');insert into profiles(id,display_name) values('${ids.a}','buyer'),('${ids.b}','bidder'),('${ids.c}','outsider');insert into organizations(id,owner_id,name) values('${ids.org}','${ids.a}','org');insert into posts(id,author_id,post_type,audience,title,body,region) values('${ids.post}','${ids.a}','request','consumer','title','body','Seoul');insert into quote_requests(id,post_id) values('${ids.request}','${ids.post}');insert into quotes(request_id,provider_id,amount,message) values('${ids.request}','${ids.b}',123,'private');insert into conversations(id,created_by) values('${ids.chat}','${ids.a}');insert into conversation_members values('${ids.chat}','${ids.a}',null),('${ids.chat}','${ids.b}',null);insert into messages(conversation_id,sender_id,body) values('${ids.chat}','${ids.b}','secret');insert into tenders(id,buyer_org,title,scope,eligibility,evaluation_method,starts_at,deadline_at,status) values('${ids.tender}','${ids.org}','sealed','scope','registered','manual',now()-interval '2 days',now()-interval '1 day','published');insert into bids(id,tender_id,bidder_id) values('${ids.bid}','${ids.tender}','${ids.b}');insert into bid_versions(bid_id,version,amount,proposal) values('${ids.bid}',1,456,'sealed secret');`,
     );

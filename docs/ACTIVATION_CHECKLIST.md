@@ -6,10 +6,16 @@
 
 1. 새 staging 프로젝트를 생성하고 Settings → API Keys에서 publishable/secret 키를 확인합니다. 서버 secret/service-role 키는 NEXT_PUBLIC 변수에 넣지 않습니다. [공식 API key 문서](https://supabase.com/docs/guides/getting-started/api-keys)
 2. 현재 `.env.example`에는 legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` 이름도 예약되어 있습니다. 실제 어댑터를 만들 때 프로젝트가 발급한 키 유형에 맞게 이름을 정리합니다.
-3. SQL Editor에서 `0001_foundation.sql` → `0002_transactional_rpc.sql` 순으로 **빈 staging DB**에 적용합니다. 기존 운영 DB에 덮어쓰지 않습니다. 적용 전 백업, 적용 실패 시 트랜잭션 롤백, 이후 버전은 새 forward migration으로 수정합니다.
-4. Supabase Auth/SSR 세션 어댑터와 로컬 Row→정규화 테이블 repository mapping을 구현합니다. 현재 로컬 사용자 UUID/세션/비밀번호를 그대로 production에 복제하지 않습니다.
+3. SQL Editor에서 `0001_foundation.sql` → `0002_transactional_rpc.sql` → `0003_free_post_type.sql` 순으로 **빈 staging DB**에 적용합니다. 기존 운영 DB에 덮어쓰지 않습니다. 적용 전 백업, 적용 실패 시 트랜잭션 롤백, 이후 버전은 새 forward migration으로 수정합니다.
+4. Google OAuth 시작·콜백과 Supabase Auth PKCE 세션을 구현했습니다. 현재 콜백은 인증된 Google 사용자를 로컬 개발 계정과 연결합니다. Supabase Auth/SSR 세션을 앱 전역 인증으로 전환하고, 로컬 Row→정규화 테이블 repository mapping을 구현해야 합니다. 현재 로컬 사용자 UUID/세션/비밀번호를 그대로 production에 복제하지 않습니다.
 5. RLS 적용 하에서 고객/업체/조직 구성원 테스트를 실행합니다. 서비스 역할로 모든 질의를 우회하는 연결은 허용하지 않습니다. 민감 쓰기는 RPC를 사용하며 아직 없는 CRUD RPC를 명세대로 추가해야 합니다.
 6. 채팅 Realtime 채널을 참여자 범위로 연결하고 재연결·순서·중복·읽음 처리를 검증합니다. 현재 폴링을 이 단계에서 대체합니다.
+
+### 현재 프로젝트의 Google OAuth 상태
+
+- Google Provider 활성화와 개발 콜백 URL은 설정했다. 앱은 PKCE OAuth 시작/콜백을 구현했으나, 실제 계정 선택 후 콜백은 운영자 브라우저에서 확인해야 한다.
+- 배포 전 `https://matda.net/auth/callback`을 Supabase Redirect URLs와 Google Authorized JavaScript origins에 추가하고 `NEXT_PUBLIC_SITE_URL=https://matda.net`으로 변경한다.
+- Google Client Secret은 Supabase Provider 화면에서만 보관한다. `.env`, GitHub, 채팅에 넣지 않는다.
 
 ## Cloudflare R2 / DNS
 
@@ -39,3 +45,5 @@
 ## Phase 9 준비
 
 현재 manifest, 반응형 UI, 공통 도메인/타입이 있습니다. 로그인 세션/비공개 파일은 오프라인 캐시에서 제외하는 정책부터 정하고 service worker·푸시를 후속 구현합니다. Expo/React Native 전환은 실제 웹 사용 검증 이후 검토합니다.
+
+초기 적용 편의용 단일 트랜잭션 파일: supabase/SETUP_DATABASE.sql. 기존 프로젝트에는 재실행하지 않는다. 공개키 인증은 확인했으나 DB 구조 적용과 앱 어댑터 연결은 아직 미완료다.
