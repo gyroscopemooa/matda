@@ -74,6 +74,14 @@ async function load(): Promise<Database> {
     return JSON.parse(await readFile(filename, "utf8"));
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return seed();
+    if (e instanceof SyntaxError) {
+      // Local preview data is disposable. Preserve a corrupt file for
+      // inspection, then let the preview recover instead of failing every API
+      // request until someone repairs the file by hand.
+      const backup = path.join(directory, `database.corrupt-${Date.now()}.json`);
+      await rename(filename, backup);
+      return seed();
+    }
     throw e;
   }
 }
