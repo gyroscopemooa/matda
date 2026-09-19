@@ -999,6 +999,12 @@ export default function Workspace() {
           <h1 className="detail-title" title={str(post.title)}>
             {str(post.title)}
           </h1>
+          {!!post.sample && (
+            <p className="muted">
+              샘플 · 작성 방법을 보여주는 예시이며 실제 요청이 아닙니다. 채팅과
+              댓글은 받지 않습니다.
+            </p>
+          )}
           {Array.isArray(post.images) && post.images.length > 0 && (
             <div className="photo-strip post-gallery">
               {post.images.map((id, index) => (
@@ -1049,7 +1055,11 @@ export default function Workspace() {
                 </button>
               </>
             ) : (
-              <button className="primary" onClick={() => chat(post)}>
+              <button
+                className="primary"
+                disabled={!!post.sample}
+                onClick={() => chat(post)}
+              >
                 <MessageCircle size={16} />
                 채팅하기
               </button>
@@ -1436,11 +1446,16 @@ export default function Workspace() {
             <input
               name="body"
               aria-label="댓글 내용"
+              disabled={!!post.sample}
               placeholder="따뜻한 댓글을 남겨주세요"
               required
               maxLength={2000}
             />
-            <button className="primary" aria-label="등록" disabled={busy}>
+            <button
+              className="primary"
+              aria-label="등록"
+              disabled={busy || !!post.sample}
+            >
               <Send size={18} />
               <span>등록</span>
             </button>
@@ -3692,10 +3707,22 @@ export default function Workspace() {
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
+                      multiple
                       disabled={images.length >= 5 || busy}
                       onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) run(() => upload(file), "사진을 추가했어요.");
+                        const files = Array.from(e.target.files || []);
+                        e.target.value = "";
+                        if (!files.length) return;
+                        const remaining = 5 - images.length;
+                        const accepted = files.slice(0, remaining);
+                        run(
+                          async () => {
+                            for (const file of accepted) await upload(file);
+                          },
+                          files.length > remaining
+                            ? `사진은 총 5장까지 가능해 선택한 사진 중 ${remaining}장만 추가했어요.`
+                            : `${accepted.length}장의 사진을 추가했어요.`,
+                        );
                       }}
                     />
                   </label>

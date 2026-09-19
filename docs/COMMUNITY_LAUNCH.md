@@ -111,3 +111,7 @@ service-role key는 필요하지 않는다. 일반 요청은 인증된 사용자
 ## 최신 로그인 정책: Google 전용
 이메일 신규가입/로그인/메일 재설정은 운영 앱에서 차단한다. Supabase Sign In / Providers에서 Email Provider를 비활성화하고 Google은 유지한다. 기존 이메일 계정 데이터/세션은 삭제하지 않는다. SMTP 연결 작업은 보류.
 
+
+## 운영팀 샘플 2개 등록
+Supabase SQL Editor에서 supabase/migrations/0010_sample_posts.sql 실행. jeonmeensoo@gmail.com의 인증된 관리자 계정이 필요하다. 청소·관리/제작·디지털 샘플 각 1개를 추가하며 기존 글은 변경하지 않는다. 재실행해도 중복 생성되지 않는다. 적용 전에는 새 샘플이 보이지 않는다.
+

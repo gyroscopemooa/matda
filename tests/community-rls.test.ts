@@ -55,6 +55,37 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
         `insert into profiles(id,display_name) values('${id}','이웃')`,
       );
     }
+    await db.exec(
+      `reset role; alter table auth.users add column email text; alter table auth.users add column email_confirmed_at timestamptz; update auth.users set email='jeonmeensoo@gmail.com',email_confirmed_at=now() where id='${c}';`,
+    );
+    const sampleSql = await readFile(
+      "supabase/migrations/0010_sample_posts.sql",
+      "utf8",
+    );
+    await db.exec(sampleSql);
+    await db.exec(sampleSql);
+    assert.equal(
+      (
+        await db.query<{ n: number }>(
+          "select count(*)::int n from posts where is_sample",
+        )
+      ).rows[0].n,
+      2,
+    );
+    await as(a);
+    await assert.rejects(
+      db.exec(
+        "select community_start_chat('8cc46960-2ef1-46e4-a4c5-dcc922a7d941')",
+      ),
+      /Sample posts/,
+    );
+    await assert.rejects(
+      db.exec(
+        `insert into comments(post_id,author_id,body) values('8cc46960-2ef1-46e4-a4c5-dcc922a7d941','${a}','sample comment')`,
+      ),
+      /Sample posts/,
+    );
+    await db.exec("reset role; delete from posts where is_sample");
     await as(a);
     await db.exec(
       `insert into storage.objects(bucket_id,name,owner_id) values('community-images','${a}/${photo}','${a}')`,

@@ -417,6 +417,8 @@ export function act(
     }
     case "comment.create": {
       const post = find(db, input.postId, "post");
+      if (post.sample)
+        throw new AppError("샘플 글에는 댓글을 작성할 수 없습니다.");
       if (!canRead(db, post, user) || post.status !== "published")
         throw new AppError("댓글을 작성할 수 없습니다.", 403);
       const row = add(
@@ -469,6 +471,10 @@ export function act(
     }
     case "conversation.create": {
       const target = find(db, input.targetId);
+      if (target.sample)
+        throw new AppError(
+          "샘플 글은 실제 요청이 아니므로 채팅을 지원하지 않습니다.",
+        );
       if (!canRead(db, target, user))
         throw new AppError("접근 권한이 없습니다.", 403);
       if (target.ownerId === user.id)

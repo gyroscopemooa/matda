@@ -137,6 +137,10 @@ export async function loadCommunity(
     rows.push({
       ...row("post", p, String(p.author_id)),
       ...author(p.author_id),
+      sample: !!p.is_sample,
+      ...(p.is_sample
+        ? { authorName: "해죠 운영팀", authorAvatar: "sun" }
+        : {}),
       type: p.post_type,
       category: p.category_id || "",
       serviceMode: p.service_mode || "local",
