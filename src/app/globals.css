@@ -2518,3 +2518,53 @@ button.admin-inline-delete:hover {
   min-height: 32px;
   padding: 4px 6px;
 }
+
+.post-safety-menu {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.post-safety-menu summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: #7d8999;
+  cursor: pointer;
+  list-style: none;
+}
+.post-safety-menu summary::-webkit-details-marker {
+  display: none;
+}
+.post-safety-menu summary:hover,
+.post-safety-menu[open] summary {
+  background: #f0f5fc;
+  color: var(--ink);
+}
+.post-safety-menu summary:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
+.post-safety-options {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  width: 150px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 8px 24px #132c491a;
+}
+.actions .post-safety-options button {
+  width: 100%;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 6px;
+  padding: 10px;
+  white-space: nowrap;
+}

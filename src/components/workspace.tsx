@@ -47,6 +47,7 @@ import {
   Car,
   Brush,
   Ellipsis,
+  Flag,
   Monitor,
   Heart,
   ImagePlus,
@@ -1053,38 +1054,67 @@ export default function Workspace() {
                 채팅하기
               </button>
             )}
-            <button
-              onClick={() =>
-                openForm(
-                  "신고하기",
-                  [
-                    {
-                      key: "reason",
-                      label: "신고 사유",
-                      type: "textarea",
-                      required: true,
-                    },
-                  ],
-                  async (v) => {
-                    await action("report.create", { ...v, targetId: post.id });
-                  },
-                )
-              }
-            >
-              신고
-            </button>
-            {!isOwner && (
-              <button
-                onClick={() =>
-                  run(
-                    () => action("block.create", { targetId: post.ownerId }),
-                    "차단했어요.",
-                  )
+            <details
+              className="post-safety-menu"
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+                  e.currentTarget.open = false;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.currentTarget.open = false;
+                  e.currentTarget.querySelector("summary")?.focus();
                 }
+              }}
+            >
+              <summary aria-label="신고 및 차단 메뉴" title="신고 및 차단">
+                <Flag size={17} />
+              </summary>
+              <div
+                className="post-safety-options"
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest("button"))
+                    e.currentTarget.parentElement?.removeAttribute("open");
+                }}
               >
-                작성자 차단
-              </button>
-            )}
+                <button
+                  onClick={() =>
+                    openForm(
+                      "신고하기",
+                      [
+                        {
+                          key: "reason",
+                          label: "신고 사유",
+                          type: "textarea",
+                          required: true,
+                        },
+                      ],
+                      async (v) => {
+                        await action("report.create", {
+                          ...v,
+                          targetId: post.id,
+                        });
+                      },
+                    )
+                  }
+                >
+                  신고
+                </button>
+                {!isOwner && (
+                  <button
+                    onClick={() =>
+                      run(
+                        () =>
+                          action("block.create", { targetId: post.ownerId }),
+                        "차단했어요.",
+                      )
+                    }
+                  >
+                    작성자 차단
+                  </button>
+                )}
+              </div>
+            </details>
           </div>
         </section>
         {flags.quotes && !!post.quoteEnabled && (
