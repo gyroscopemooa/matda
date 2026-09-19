@@ -167,6 +167,7 @@ export default function Workspace() {
     mode: "local",
   });
   const [loading, setLoading] = useState(true);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [welcomeMeme, setWelcomeMeme] = useState(false);
   const welcomeInitialized = useRef(false);
   useEffect(() => {
@@ -1231,7 +1232,7 @@ export default function Workspace() {
           </section>
         )}
         <section className="panel">
-          <h2>댓글</h2>
+          <h2 id="comments">댓글</h2>
           {rows
             .filter((r) => r.kind === "comment" && r.postId === post.id)
             .map((c) => (
@@ -1552,10 +1553,10 @@ export default function Workspace() {
               <span>보낸 견적</span>
             </div>
           )}
-          <div>
+          <Link href="/chat">
             <b>{rows.filter((r) => r.kind === "conversation").length}</b>
             <span>나의 대화</span>
-          </div>
+          </Link>
         </div>
         {flags.quotes && user.role === "provider" && (
           <section className="panel">
@@ -1810,6 +1811,14 @@ export default function Workspace() {
       </>
     );
   }
+  function chatPartner(chat: Row) {
+    const id = ((chat.participants as string[]) || []).find(
+      (id) => id !== user?.id,
+    );
+    return str(
+      ((chat.names as Record<string, string>) || {})[id || ""] || "상대방",
+    );
+  }
   function chats() {
     if (!user) return my();
     const selected = rows.find(
@@ -1842,16 +1851,47 @@ export default function Workspace() {
                       }
                     >
                       <MessageCircle size={21} />
-                      <span>{str(c.title)}</span>
+                      <span className="chat-summary">
+                        <strong>{chatPartner(c)}</strong>
+                        <span className="chat-title">{str(c.title)}</span>
+                        <small className="chat-preview">
+                          {str(
+                            rows
+                              .filter(
+                                (r) =>
+                                  r.kind === "message" &&
+                                  r.conversationId === c.id,
+                              )
+                              .at(-1)?.body,
+                          ) || "아직 메시지가 없어요"}
+                        </small>
+                      </span>
                       {unread > 0 && <b className="unread">{unread}</b>}
                     </Link>
                   );
                 })
               : empty("아직 대화가 없어요", "글에서 채팅을 시작하세요.")}
           </section>
+          {!selected && conversations.length > 0 && (
+            <section className="panel chat-main">
+              <h2>대화를 선택해주세요</h2>
+              <p className="muted">
+                목록에서 상대방을 누르면 받은 메시지를 확인하고 답장할 수
+                있어요.
+              </p>
+            </section>
+          )}
           {selected && (
             <section className="panel chat-main">
-              <h2>{str(selected.title)}</h2>
+              <header className="chat-heading">
+                <h2>{chatPartner(selected)}</h2>
+                <Link
+                  className="chat-title"
+                  href={"/posts/" + str(selected.targetId)}
+                >
+                  {str(selected.title)}
+                </Link>
+              </header>
               <div className="messages">
                 {rows
                   .filter(
@@ -2092,7 +2132,15 @@ export default function Workspace() {
           <>
             <section className="panel">
               <span className="badge">{str(selected.status)}</span>
-              <h2>{str(selected.title)}</h2>
+              <header className="chat-heading">
+                <h2>{chatPartner(selected)}</h2>
+                <Link
+                  className="chat-title"
+                  href={"/posts/" + str(selected.targetId)}
+                >
+                  {str(selected.title)}
+                </Link>
+              </header>
               <p className="body-text">{str(selected.body)}</p>
               <p>
                 <MapPin size={14} /> {str(selected.region)} ·{" "}
@@ -2473,6 +2521,25 @@ export default function Workspace() {
       </>
     );
   }
+  function openNotification(n: Row) {
+    const target = rows.find((r) => r.id === n.targetId);
+    const href =
+      target?.kind === "conversation"
+        ? "/chat/" + target.id
+        : target?.kind === "post"
+          ? "/posts/" +
+            target.id +
+            (str(n.message).includes("댓글") ? "#comments" : "")
+          : "";
+    setNotificationsOpen(false);
+    run(async () => {
+      await action("notification.read", { id: n.id });
+      if (target?.kind === "conversation")
+        await action("conversation.read", { id: target.id });
+      if (href) router.push(href);
+      else setToast("삭제되었거나 더 이상 볼 수 없는 내용입니다.");
+    }, "");
+  }
   function notifications() {
     return (
       <>
@@ -2485,9 +2552,7 @@ export default function Workspace() {
                 <button
                   className="notification panel"
                   key={n.id}
-                  onClick={() =>
-                    run(() => action("notification.read", { id: n.id }), "")
-                  }
+                  onClick={() => openNotification(n)}
                 >
                   <Bell size={20} />
                   <span>{str(n.message)}</span>
@@ -2689,14 +2754,71 @@ export default function Workspace() {
               <span>{region}</span>
               <ChevronRight size={14} />
             </button>
-            <Link
-              className="icon-button notifications-link"
-              aria-label="알림"
-              href="/notifications"
-            >
-              <Bell size={21} />
-              {own("notification").some((n) => !n.read) && <i />}
-            </Link>
+            <div className="notification-anchor">
+              <button
+                className="icon-button notifications-link"
+                aria-label="알림"
+                aria-expanded={notificationsOpen}
+                aria-controls="notification-popover"
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+              >
+                <Bell size={21} />
+                {own("notification").some((n) => !n.read) && <i />}
+              </button>
+              {notificationsOpen && (
+                <>
+                  <button
+                    className="notification-backdrop"
+                    aria-label="알림 닫기"
+                    onClick={() => setNotificationsOpen(false)}
+                  />
+                  <section
+                    className="notification-popover"
+                    id="notification-popover"
+                    aria-label="최근 알림"
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setNotificationsOpen(false);
+                    }}
+                  >
+                    <div className="notification-heading">
+                      <b>알림</b>
+                      <Link
+                        href="/notifications"
+                        onClick={() => setNotificationsOpen(false)}
+                      >
+                        전체 보기
+                      </Link>
+                    </div>
+                    {own("notification")
+                      .slice()
+                      .reverse()
+                      .slice(0, 10)
+                      .map((n) => (
+                        <button
+                          key={n.id}
+                          className="notification-entry"
+                          onClick={() => openNotification(n)}
+                        >
+                          <span>{str(n.message)}</span>
+                          <small>
+                            {n.read ? "읽음" : "새 알림"} · {date(n.createdAt)}
+                          </small>
+                        </button>
+                      ))}
+                    {!own("notification").length && (
+                      <p>댓글과 채팅 소식을 여기서 알려드려요.</p>
+                    )}
+                    <Link
+                      className="text-button"
+                      href="/chat"
+                      onClick={() => setNotificationsOpen(false)}
+                    >
+                      나의 대화 열기 →
+                    </Link>
+                  </section>
+                </>
+              )}
+            </div>
             {user ? (
               <Link className="user-chip" href="/my">
                 {user.name.slice(0, 2)}

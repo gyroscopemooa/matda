@@ -1276,7 +1276,8 @@ main {
   gap: 12px;
   margin: 20px 0;
 }
-.stats > div {
+.stats > div,
+.stats > a {
   background: white;
   border: 1px solid var(--line);
   padding: 20px;
@@ -1878,7 +1879,8 @@ dialog .muted {
     height: 45px;
     font-size: 19px;
   }
-  .stats > div {
+  .stats > div,
+  .stats > a {
     padding: 16px 10px;
   }
   .stats b {
@@ -2213,4 +2215,95 @@ button.region-picker span {
   background: #4285f4;
   font-weight: 800;
   font-size: 13px;
+}
+
+.notification-anchor {
+  position: relative;
+}
+.notification-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: transparent;
+  border: 0;
+  cursor: default;
+}
+.notification-popover {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 70vh;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 12px 36px #132c4920;
+  z-index: 50;
+}
+.notification-heading {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.notification-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  text-align: left;
+  padding: 14px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: white;
+}
+.notification-entry small,
+.chat-preview {
+  color: #7d8999;
+}
+.notification-popover p {
+  padding: 20px 0;
+}
+.chat-main,
+.chat-summary {
+  min-width: 0;
+}
+.chat-summary {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+}
+.chat-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.chat-preview {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.chat-item > svg {
+  flex-shrink: 0;
+}
+.chat-heading h2 {
+  margin-bottom: 8px;
+}
+.chat-heading a {
+  font-size: 13px;
+  color: #7d8999;
+}
+#comments {
+  scroll-margin-top: 110px;
+}
+@media (max-width: 600px) {
+  .notification-popover {
+    position: fixed;
+    top: 68px;
+    right: 16px;
+  }
 }
