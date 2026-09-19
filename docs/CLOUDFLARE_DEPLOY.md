@@ -13,6 +13,8 @@ Cloudflare → Compute → Workers & Pages → Create application → GitHub 저
 - Worker 런타임 Variables and Secrets에도 같은 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 설정
 - 나머지 공개 설정은 wrangler.jsonc가 관리한다. Phase 1, Supabase Storage, matda.net 기준.
 
+재배포 시 대시보드에서 추가한 런타임 변수는 `keep_vars: true`로 유지한다. wrangler.jsonc의 vars에 명시된 같은 이름의 값은 코드 설정이 우선하므로 그 값은 저장소에서 변경한다. Build 환경변수는 Cloudflare Builds 설정에 별도로 저장되며 Git push마다 다시 입력하지 않는다. Secret은 코드에 넣지 않고 대시보드에서 관리한다.
+
 service_role 키와 Google OAuth client secret은 여기에 넣지 않는다. Google secret은 Supabase Provider 설정에만 둔다. `.env.local`을 Git에 올리지 않는다. cf:build는 .env 파일이 있는 작업 폴더에서 중단한다. 개발 파일을 삭제하지 말고 Cloudflare의 깨끗한 Git checkout에서 빌드한다.
 
 ## 배포 확인 후 도메인 연결
