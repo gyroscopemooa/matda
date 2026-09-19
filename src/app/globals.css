@@ -1444,6 +1444,9 @@ main {
   border-radius: 50%;
 }
 .upload-button {
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -1454,11 +1457,24 @@ main {
   font-size: 12px;
   cursor: pointer;
 }
-.upload-button input {
-  max-width: 180px;
-  font-size: 10px;
-  border: 0;
-  padding: 0;
+.upload-button input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.upload-button:focus-within {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
+.upload-button:has(input:disabled) {
+  opacity: 0.6;
+  cursor: wait;
+}
+.upload-button input:disabled {
+  cursor: wait;
 }
 .toast {
   position: fixed;
