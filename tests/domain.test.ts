@@ -462,3 +462,52 @@ test("Quote expiry is not reset by toggling, and declining completion removes co
   act(d, customer, "trade.confirm", { id: p.id, confirmed: false }, now);
   assert.ok(!p.completedAt);
 });
+
+test("Leaving chat hides only the caller, preserves history and resurfaces on incoming message", () => {
+  const d = db();
+  const p = post(d);
+  const chat = act(
+    d,
+    provider(),
+    "conversation.create",
+    { targetId: p.id },
+    now,
+  ) as Row;
+  act(
+    d,
+    provider(),
+    "message.create",
+    { conversationId: chat.id, body: "hello" },
+    now + 1,
+  );
+  assert.throws(() =>
+    act(d, outsider, "conversation.leave", { id: chat.id }, now + 2),
+  );
+  act(d, customer, "conversation.leave", { id: chat.id }, now + 3);
+  assert.equal(
+    snapshot(d, customer).rows.some((r) => r.id === chat.id),
+    false,
+  );
+  assert.equal(
+    snapshot(d, provider()).rows.some((r) => r.id === chat.id),
+    true,
+  );
+  assert.equal(d.rows.filter((r) => r.kind === "message").length, 1);
+  act(
+    d,
+    provider(),
+    "message.create",
+    { conversationId: chat.id, body: "new" },
+    now + 4,
+  );
+  assert.equal(
+    snapshot(d, customer).rows.some((r) => r.id === chat.id),
+    true,
+  );
+  act(d, customer, "conversation.leave", { id: chat.id }, now + 5);
+  act(d, customer, "conversation.read", { id: chat.id }, now + 6);
+  assert.equal(
+    snapshot(d, customer).rows.some((r) => r.id === chat.id),
+    true,
+  );
+});

@@ -169,6 +169,11 @@ export async function loadCommunity(
       title:
         lists.posts.find((p) => p.id === c.post_id)?.title || "이웃과의 대화",
       participants: members.map((m) => m.user_id),
+      leftAtBy: Object.fromEntries(
+        members
+          .filter((m) => m.left_at)
+          .map((m) => [String(m.user_id), String(m.left_at)]),
+      ),
       names: Object.fromEntries(
         members.map((m) => [
           String(m.user_id),
@@ -238,7 +243,12 @@ export async function communityAction(
     const id = checked(
       await client.rpc("community_start_chat", { target: input.targetId }),
     );
+    checked(await client.rpc("community_read_chat", { target: id }));
     return { id };
+  }
+  if (action === "conversation.leave") {
+    checked(await client.rpc("community_leave_chat", { target: input.id }));
+    return { ok: true };
   }
   if (action === "conversation.read") {
     checked(await client.rpc("community_read_chat", { target: input.id }));
@@ -407,4 +417,3 @@ export async function communityAction(
   }
   return result;
 }
-

@@ -41,6 +41,9 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
       await readFile("supabase/migrations/0007_supabase_storage.sql", "utf8"),
     );
     await db.exec(
+      await readFile("supabase/migrations/0008_chat_leave.sql", "utf8"),
+    );
+    await db.exec(
       `insert into auth.users values('${a}'),('${b}'),('${c}');insert into community_admins values('${c}');`,
     );
     for (const id of [a, b, c]) {
@@ -144,6 +147,10 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
       "Even admins cannot read another conversation",
     );
     await assert.rejects(
+      db.exec(`select community_leave_chat('${chat}')`),
+      /Not a participant/,
+    );
+    await assert.rejects(
       db.exec(`select community_read_chat('${chat}')`),
       /Not a participant/,
     );
@@ -155,8 +162,34 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
     );
     await as(a);
     assert.equal(await count("notifications"), 2);
+    await db.exec(`select community_leave_chat('${chat}')`);
+    assert.equal(
+      (
+        await db.query<{ n: number }>(
+          `select count(*)::int n from conversation_members where conversation_id='${chat}' and user_id='${a}' and left_at is not null`,
+        )
+      ).rows[0].n,
+      1,
+    );
+    assert.equal(
+      (
+        await db.query<{ n: number }>(
+          `select count(*)::int n from conversation_members where conversation_id='${chat}' and user_id='${b}' and left_at is not null`,
+        )
+      ).rows[0].n,
+      0,
+    );
+    assert.equal(await count("messages"), 1);
     await db.exec(
       `update notifications set read_at=now();select community_read_chat('${chat}')`,
+    );
+    assert.equal(
+      (
+        await db.query<{ n: number }>(
+          `select count(*)::int n from conversation_members where conversation_id='${chat}' and user_id='${a}' and left_at is not null`,
+        )
+      ).rows[0].n,
+      0,
     );
     await assert.rejects(
       db.exec(`update notifications set message='forged'`),

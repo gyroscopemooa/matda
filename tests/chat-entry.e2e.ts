@@ -84,6 +84,30 @@ test("Author opens incoming chat from bell and MY, then replies", async ({
     .filter({ hasText: "새 메시지" })
     .click();
   await expect(author).toHaveURL(new RegExp("/chat/" + chat.result.id));
+  for (let i = 0; i < 6; i++) {
+    const extra = await (
+      await author.request.post("/api/app", {
+        data: {
+          action: "post.create",
+          input: {
+            type: "request",
+            category: "제작·디지털",
+            serviceMode: "online",
+            title: `스크롤 확인 ${i}`,
+            body: `채팅 목록 높이 확인 ${i}`,
+          },
+        },
+      })
+    ).json();
+    await sender.request.post("/api/app", {
+      data: {
+        action: "conversation.create",
+        input: { targetId: extra.result.id },
+      },
+    });
+  }
+  await author.reload();
+  await expect(author.locator(".chat-item")).toHaveCount(7);
   for (const width of [1440, 390]) {
     await author.setViewportSize({ width, height: 900 });
     expect(
@@ -91,8 +115,27 @@ test("Author opens incoming chat from bell and MY, then replies", async ({
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    expect(
+      await author
+        .locator(".chat-list")
+        .evaluate((el) => el.scrollHeight > el.clientHeight),
+    ).toBe(true);
+    const panel = await author.locator(".chat-main").boundingBox();
+    const form = await author.locator(".chat-main form").boundingBox();
+    expect(panel!.y + panel!.height - form!.y - form!.height).toBeLessThan(40);
     await author.screenshot({ path: `docs/chat-fixed-${width}.png` });
   }
+  await author.getByRole("button", { name: "나가기", exact: true }).click();
+  await author.locator('[name="confirm"]').fill("나가기");
+  await author.getByRole("button", { name: "저장하기", exact: true }).click();
+  await expect(author).toHaveURL(/\/chat$/);
+  await expect(author.locator(".chat-item")).toHaveCount(6);
+  await author.reload();
+  await expect(author.locator(".chat-item")).toHaveCount(6);
+  await sender.reload();
+  await expect(
+    sender.getByText("네 반갑습니다", { exact: true }).last(),
+  ).toBeVisible();
   await a.close();
   await b.close();
 });

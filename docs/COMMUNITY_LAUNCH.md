@@ -99,3 +99,7 @@ service-role key는 필요하지 않는다. 일반 요청은 인증된 사용자
 ## 2026-09-20 Storage SQL 원격 반영 확인
 사용자 성공 보고 후 공개 이미지 RPC community_public_image를 비로그인으로 호출하여 정상 응답/존재하지 않는 ID의 빈 결과 확인. profiles/posts/comments 스키마 정상, media 직접 조회는 비로그인 권한 차단(42501). migration0007의 RPC 배포 확인이며 실제 이미지 업로드·소유자 삭제·사진 표시 실검증 완료를 의미하지 않는다. 현재 앱은 local adapter 유지. 다음 작업은 원격 모드에서 로그인 및 사진 업로드 검증이다.
 
+
+## 채팅 나가기 추가 적용
+기존 0007까지 적용한 DB에서 supabase/migrations/0008_chat_leave.sql만 SQL Editor로 실행한다. 기존 대화와 메시지는 삭제하지 않는다. 적용 전에는 나가기 RPC가 없어 나가기 요청이 오류로 끝나며 기존 채팅은 유지된다.
+

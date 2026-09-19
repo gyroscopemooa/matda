@@ -1898,6 +1898,31 @@ export default function Workspace() {
           {selected && (
             <section className="panel chat-main">
               <header className="chat-heading">
+                <button
+                  className="chat-leave"
+                  disabled={busy}
+                  onClick={() =>
+                    openForm(
+                      "채팅방 나가기",
+                      [
+                        {
+                          key: "confirm",
+                          label:
+                            "내 목록에서 숨깁니다. 새 메시지가 오면 다시 나타납니다. 나가려면 ‘나가기’를 입력하세요.",
+                          required: true,
+                        },
+                      ],
+                      async (v) => {
+                        if (v.confirm !== "나가기")
+                          throw new Error("나가기를 입력해주세요.");
+                        await action("conversation.leave", { id: selected.id });
+                        router.push("/chat");
+                      },
+                    )
+                  }
+                >
+                  나가기
+                </button>
                 <h2>{chatPartner(selected)}</h2>
                 <Link
                   className="chat-title"

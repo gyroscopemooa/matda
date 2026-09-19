@@ -1317,8 +1317,12 @@ main {
 }
 .chat-list {
   padding: 8px;
+  height: 510px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .chat-item {
+  min-height: 96px;
   display: flex;
   gap: 9px;
   padding: 13px 9px;
@@ -2296,6 +2300,37 @@ button.region-picker span {
 .chat-heading a {
   font-size: 13px;
   color: #7d8999;
+}
+.chat-main {
+  height: 510px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.chat-main .chat-heading,
+.chat-main .inline-form {
+  flex-shrink: 0;
+}
+.chat-main .messages {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overscroll-behavior: contain;
+}
+.chat-leave {
+  float: right;
+  margin-left: 12px;
+}
+@media (max-width: 760px) {
+  .chat-list {
+    height: auto;
+    max-height: 304px;
+  }
+  .chat-main {
+    height: 480px;
+    height: min(560px, 70dvh);
+    min-height: 320px;
+  }
 }
 #comments {
   scroll-margin-top: 110px;

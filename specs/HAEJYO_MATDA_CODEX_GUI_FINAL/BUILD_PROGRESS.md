@@ -263,3 +263,7 @@
 ## 2026-09-20 Cloudflare Workers 배포 준비
 사용자 선택에 따라 Workers + OpenNext 설정과 Git 빌드 명령 추가. 사진/인증/DB는 Supabase 유지. Next production build 통과, Windows OpenNext 최종 번들은 symlink EPERM으로 실패하여 Workers 실행 검증은 미완료. Cloudflare Linux Git build/deploy가 다음 단계. .env 파일 포함 빌드를 차단하여 로컬 설정 번들 유출 예방. 실제 배포/DNS 변경 없음. docs/CLOUDFLARE_DEPLOY.md 참조.
 
+
+## 2026-09-20 채팅 스크롤 및 나가기
+PC 목록 약 5개 높이(510px), 모바일 약 3개 높이에서 독립 스크롤. 대화 패널 flex로 입력창 하단 유지. 나가기는 본인 목록 숨김이며 상대 기록 보존, 새 수신 메시지나 명시적 재진입 시 표시. SQL 0008_chat_leave.sql 신규 RPC/left_at 추가(원격 적용 대기). 단위/DB 29개 및 PC1440/모바일390 채팅7개 E2E 통과. Workers 생성 타입의 앱 전역 충돌을 tsconfig exclude로 방지.
+

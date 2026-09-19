@@ -40,6 +40,9 @@
     ".next-build/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "cloudflare-env.d.ts",
+    ".open-next",
+    ".next-cloudflare"
   ]
 }

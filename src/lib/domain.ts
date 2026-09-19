@@ -156,6 +156,26 @@ export function canRead(
   return !!user && row.ownerId === user.id;
 }
 export function snapshot(db: Database, user?: User) {
+  const hiddenChats = new Set(
+    db.rows
+      .filter((r) => {
+        if (r.kind !== "conversation" || !user) return false;
+        const leftAt = (r.leftAtBy as Record<string, string> | undefined)?.[
+          user.id
+        ];
+        return (
+          !!leftAt &&
+          !db.rows.some(
+            (m) =>
+              m.kind === "message" &&
+              m.conversationId === r.id &&
+              m.ownerId !== user.id &&
+              Date.parse(m.createdAt) > Date.parse(leftAt),
+          )
+        );
+      })
+      .map((r) => r.id),
+  );
   const blocked = db.rows
     .filter((r) => r.kind === "block" && r.ownerId === user?.id)
     .map((r) => r.targetId);
@@ -172,7 +192,13 @@ export function snapshot(db: Database, user?: User) {
         : [],
     user: user ? publicUser(user) : null,
     rows: db.rows
-      .filter((r) => canRead(db, r, user) && !blocked.includes(r.ownerId))
+      .filter(
+        (r) =>
+          canRead(db, r, user) &&
+          !blocked.includes(r.ownerId) &&
+          !hiddenChats.has(r.id) &&
+          !(r.kind === "message" && hiddenChats.has(String(r.conversationId))),
+      )
       .map((source) => {
         const r = source.category
           ? { ...source, category: normalizeCategory(String(source.category)) }
@@ -480,6 +506,8 @@ export function act(
           now,
         );
       emit("chat_started", row.id);
+      if (row.leftAtBy)
+        delete (row.leftAtBy as Record<string, string>)[user.id];
       return row;
     }
     case "message.create": {
@@ -512,10 +540,25 @@ export function act(
         if (id !== user.id) notify(id, "새 메시지가 도착했어요.", chat.id);
       return row;
     }
+    case "conversation.leave":
     case "conversation.read": {
       const chat = get("conversation");
       if (!canRead(db, chat, user))
         throw new AppError("접근 권한이 없습니다.", 403);
+      const leftAtBy = { ...((chat.leftAtBy as Record<string, string>) || {}) };
+      if (action === "conversation.leave")
+        leftAtBy[user.id] = new Date(now).toISOString();
+      else delete leftAtBy[user.id];
+      chat.leftAtBy = leftAtBy;
+      if (action === "conversation.leave") {
+        for (const notification of db.rows.filter(
+          (r) =>
+            r.kind === "notification" &&
+            r.ownerId === user.id &&
+            r.targetId === chat.id,
+        ))
+          notification.read = true;
+      }
       for (const row of db.rows.filter(
         (r) => r.kind === "message" && r.conversationId === chat.id,
       ))
