@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import ProfileAvatar, { Avatar } from "./profile-avatar";
 import RotatingBrand from "./rotating-brand";
+import RotatingWelcome from "./rotating-welcome";
 import PostKindPicker from "./post-kind-picker";
 import { popularPosts } from "@/lib/popular";
 import RegionPicker from "./region-picker";
@@ -760,19 +761,15 @@ export default function Workspace() {
     return (
       <>
         <section className={`welcome${biz ? "" : " welcome-katuri"}`}>
-          <div className="eyebrow">
-            {biz ? "WORK, BETTER TOGETHER" : "MAKE IT HAPPEN"}
-          </div>
-          <h1>
-            {biz
-              ? "기업의 일도, 좋은 연결에서"
-              : "필요한 일이 있나요? 일단 올려죠."}
-          </h1>
-          <p>
-            {biz
-              ? "우리 회사에 맞는 전문업체를 만나보세요."
-              : "청소부터 웹·앱 제작까지, 맡기고 싶은 일과 궁금한 점을 나눠보세요."}
-          </p>
+          {biz ? (
+            <>
+              <div className="eyebrow">WORK, BETTER TOGETHER</div>
+              <h1>기업의 일도, 좋은 연결에서</h1>
+              <p>우리 회사에 맞는 전문업체를 만나보세요.</p>
+            </>
+          ) : (
+            <RotatingWelcome />
+          )}
           <span className="welcome-art" aria-hidden="true">
             {welcomeMeme && !biz ? (
               <svg
