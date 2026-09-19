@@ -1,0 +1,36 @@
+{
+  "name": "haejyo-matda",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test.mjs",
+    "test:e2e": "playwright test",
+    "local:admin": "tsx docs/local-admin.ts",
+    "dev:test": "node scripts/dev-test.mjs",
+    "lint": "eslint src tests scripts docs/local-admin.ts next.config.ts playwright.config.ts",
+    "format": "prettier --write src tests scripts next.config.ts playwright.config.ts eslint.config.mjs",
+    "preview": "node scripts/dev-preview.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "next": "16.3.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@playwright/test": "^1.58.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.1",
+    "prettier": "^3.9.8",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
