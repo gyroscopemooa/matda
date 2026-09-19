@@ -2307,3 +2307,77 @@ button.region-picker span {
     right: 16px;
   }
 }
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.guide-card h2 {
+  font-size: 20px;
+  margin: 12px 0;
+}
+.guide-card p {
+  color: #63758a;
+  line-height: 1.8;
+}
+.guide-card span {
+  display: block;
+  font-size: 12px;
+  margin-top: 20px;
+  color: var(--blue);
+}
+.guide-detail {
+  max-width: 850px;
+}
+.guide-detail > h1 {
+  margin: 18px 0;
+  word-break: keep-all;
+}
+.guide-detail > p,
+.guide-detail li {
+  line-height: 1.9;
+  margin: 16px 0;
+}
+.guide-detail > h2 {
+  margin-top: 30px;
+}
+.guide-detail ol {
+  padding-left: 24px;
+}
+.guide-detail pre {
+  white-space: pre-wrap;
+  background: #f4f7fc;
+  padding: 20px;
+  border-radius: 12px;
+  line-height: 2;
+  font-family: inherit;
+}
+.guide-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.guide-cta {
+  background: #edf4ff;
+  padding: 24px;
+  border-radius: 16px;
+  margin: 24px 0;
+}
+.guide-cta p {
+  margin: 14px 0;
+}
+@media (max-width: 600px) {
+  .guide-grid {
+    grid-template-columns: 1fr;
+  }
+  .guide-detail {
+    padding: 20px;
+  }
+}
+
+.mobile-top-nav a {
+  white-space: nowrap;
+  flex-shrink: 0;
+}

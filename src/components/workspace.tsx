@@ -9,6 +9,8 @@ import {
 import Link from "next/link";
 import ProfileAvatar, { Avatar } from "./profile-avatar";
 import RotatingBrand from "./rotating-brand";
+import GuideLibrary from "./guide-library";
+import { publishedGuides, type Guide } from "@/lib/guides";
 import RotatingWelcome from "./rotating-welcome";
 import PostKindPicker from "./post-kind-picker";
 import { popularPosts } from "@/lib/popular";
@@ -351,7 +353,11 @@ export default function Workspace() {
     }
     setModal({ title, fields, submit, button, successMessage });
   }
-  function createPost(existing?: Row, targetProviderId?: string) {
+  function createPost(
+    existing?: Row,
+    targetProviderId?: string,
+    guide?: Guide,
+  ) {
     if (!user) {
       setAuthOpen(true);
       return;
@@ -370,7 +376,9 @@ export default function Workspace() {
           options: ["해줘요", "질문", "후기", "자유"],
           value: existing ? typeLabel(existing.type) : "해줘요",
           category: str(
-            existing?.category || (biz ? businessCategories[0] : categories[0]),
+            existing?.category ||
+              guide?.category ||
+              (biz ? businessCategories[0] : categories[0]),
           ),
           biz,
         },
@@ -380,7 +388,7 @@ export default function Workspace() {
           label: "내용",
           type: "textarea",
           required: true,
-          value: str(existing?.body),
+          value: str(existing?.body || guide?.template),
         },
         {
           key: biz ? "region" : "serviceRegion",
@@ -390,7 +398,7 @@ export default function Workspace() {
             ? isOnline(existing)
               ? "online"
               : "local"
-            : serviceFilter === "online"
+            : guide?.category === "제작·디지털" || serviceFilter === "online"
               ? "online"
               : "local",
           value: str(
@@ -510,6 +518,7 @@ export default function Workspace() {
   const nav = [
     { href: "/", label: "홈" },
     { href: "/community", label: "커뮤니티" },
+    { href: "/guides", label: "해죠 가이드" },
     { href: "/quotes", label: "견적받기" },
     { href: "/providers", label: "업체찾기" },
     { href: "/biz", label: "기업서비스", badge: "BIZ" },
@@ -2686,27 +2695,61 @@ export default function Workspace() {
       </>
     );
   }
-  const content = selectedPost
-    ? detail(selectedPost)
-    : path.startsWith("/posts/")
-      ? empty("글을 찾을 수 없어요", "삭제되었거나 접근 권한이 없는 글입니다.")
-      : path.startsWith("/providers")
-        ? providers()
-        : path.startsWith("/my")
-          ? my()
-          : path.startsWith("/chat")
-            ? chats()
-            : path.startsWith("/notifications")
-              ? notifications()
-              : path.startsWith("/biz/rfqs")
-                ? procurement()
-                : path.startsWith("/biz/tenders")
-                  ? procurement(true)
-                  : path.startsWith("/biz/contracts")
-                    ? contracts()
-                    : path.startsWith("/admin")
-                      ? admin()
-                      : feed();
+  function requestFromGuide(guide: Guide) {
+    if (!user) {
+      try {
+        sessionStorage.setItem("haejyo-pending-guide", guide.slug);
+      } catch {
+        /* Login stays on the guide. */
+      }
+      setAuthOpen(true);
+      return;
+    }
+    createPost(undefined, undefined, guide);
+  }
+  const guideResume = useRef(false);
+  useEffect(() => {
+    if (!user || guideResume.current) return;
+    try {
+      const slug = sessionStorage.getItem("haejyo-pending-guide");
+      const guide = publishedGuides.find((g) => g.slug === slug);
+      if (guide) {
+        guideResume.current = true;
+        sessionStorage.removeItem("haejyo-pending-guide");
+        createPost(undefined, undefined, guide);
+      }
+    } catch {
+      /* A guide can still be opened manually. */
+    }
+    // Resume the visitor's explicit request once authentication completes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+  const content =
+    path === "/guides" || path.startsWith("/guides/") ? (
+      <GuideLibrary slug={path.split("/")[2]} onRequest={requestFromGuide} />
+    ) : selectedPost ? (
+      detail(selectedPost)
+    ) : path.startsWith("/posts/") ? (
+      empty("글을 찾을 수 없어요", "삭제되었거나 접근 권한이 없는 글입니다.")
+    ) : path.startsWith("/providers") ? (
+      providers()
+    ) : path.startsWith("/my") ? (
+      my()
+    ) : path.startsWith("/chat") ? (
+      chats()
+    ) : path.startsWith("/notifications") ? (
+      notifications()
+    ) : path.startsWith("/biz/rfqs") ? (
+      procurement()
+    ) : path.startsWith("/biz/tenders") ? (
+      procurement(true)
+    ) : path.startsWith("/biz/contracts") ? (
+      contracts()
+    ) : path.startsWith("/admin") ? (
+      admin()
+    ) : (
+      feed()
+    );
   const isFeed = ["/", "/community", "/quotes", "/biz"].includes(path);
   return (
     <>

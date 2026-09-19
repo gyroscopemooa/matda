@@ -1,3 +1,4 @@
+import { publishedGuides } from "@/lib/guides";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Workspace from "@/components/workspace";
@@ -7,6 +8,7 @@ import { remoteEnabled } from "@/lib/community-repository";
 import { createClient } from "@supabase/supabase-js";
 const titles: Record<string, string> = {
   "": "필요한 일이 있나요? 일단 올려죠",
+  guides: "해죠 가이드",
   community: "필요한 일과 이야기를 나누는 곳",
   quotes: "간편하게 견적받기",
   providers: "좋은 업체 찾기",
@@ -58,6 +60,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       /* Preview configuration errors surface on the page. */
     }
   }
+  if (parts[0] === "guides" && parts.length === 2) {
+    const guide = publishedGuides.find((g) => g.slug === parts[1]);
+    if (!guide) notFound();
+    title = guide.title;
+    description = guide.intro;
+  }
   return {
     title: title || siteConfig.name,
     description,
@@ -77,12 +85,18 @@ export default async function Page({ params }: Props) {
     parts.length &&
     !(parts.join("/") in titles) &&
     !(
-      (["posts", "providers", "chat"].includes(parts[0]) &&
+      (["posts", "providers", "chat", "guides"].includes(parts[0]) &&
         parts.length === 2) ||
       (parts[0] === "biz" &&
         ["rfqs", "tenders"].includes(parts[1]) &&
         parts.length === 3)
     )
+  )
+    notFound();
+  if (
+    parts[0] === "guides" &&
+    parts.length === 2 &&
+    !publishedGuides.some((g) => g.slug === parts[1])
   )
     notFound();
   return <Workspace />;
