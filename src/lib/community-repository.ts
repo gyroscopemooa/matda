@@ -166,6 +166,8 @@ export async function loadCommunity(
     rows.push({
       ...row("conversation", c, String(c.created_by)),
       targetId: c.post_id,
+      closedAt: c.closed_at,
+      closedBy: c.closed_by,
       title:
         lists.posts.find((p) => p.id === c.post_id)?.title || "이웃과의 대화",
       participants: members.map((m) => m.user_id),
@@ -203,6 +205,7 @@ export async function loadCommunity(
       ...row("notification", n, String(n.user_id)),
       read: !!n.read_at,
       targetId: n.target_id,
+      sourceId: n.source_id,
     });
   for (const b of lists.blocks || [])
     rows.push({
@@ -248,6 +251,10 @@ export async function communityAction(
   }
   if (action === "conversation.leave") {
     checked(await client.rpc("community_leave_chat", { target: input.id }));
+    return { ok: true };
+  }
+  if (action === "conversation.close") {
+    checked(await client.rpc("community_close_chat", { target: input.id }));
     return { ok: true };
   }
   if (action === "conversation.read") {

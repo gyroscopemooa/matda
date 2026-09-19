@@ -71,6 +71,18 @@ test("Author opens incoming chat from bell and MY, then replies", async ({
   ).toBeVisible();
   await author.getByRole("button", { name: "알림", exact: true }).click();
   await expect(author.getByRole("region", { name: "최근 알림" })).toBeVisible();
+  await expect(
+    author
+      .locator(".notification-preview")
+      .filter({ hasText: "제작 도와드릴게요" }),
+  ).toBeVisible();
+  await author
+    .locator(".notification-backdrop")
+    .hover({ position: { x: 5, y: 300 } });
+  await expect(author.locator(".notification-backdrop")).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
   await author
     .locator(".notification-entry")
     .filter({ hasText: "새 댓글" })
@@ -125,8 +137,24 @@ test("Author opens incoming chat from bell and MY, then replies", async ({
     expect(panel!.y + panel!.height - form!.y - form!.height).toBeLessThan(40);
     await author.screenshot({ path: `docs/chat-fixed-${width}.png` });
   }
-  await author.getByRole("button", { name: "나가기", exact: true }).click();
-  await author.locator('[name="confirm"]').fill("나가기");
+  await author.getByRole("button", { name: "대화 종료", exact: true }).click();
+  await author.locator('[name="confirm"]').fill("종료");
+  await author.getByRole("button", { name: "저장하기", exact: true }).click();
+  await expect(author.locator(".chat-ended")).toContainText("내가");
+  await expect(author.getByLabel("메시지", { exact: true })).toHaveCount(0);
+  await sender.reload();
+  await expect(sender.locator(".chat-ended")).toContainText("상대방이");
+  const denied = await sender.request.post("/api/app", {
+    data: {
+      action: "message.create",
+      input: { conversationId: chat.result.id, body: "종료 우회" },
+    },
+  });
+  expect(denied.status()).toBe(409);
+  await author
+    .getByRole("button", { name: "목록에서 숨기기", exact: true })
+    .click();
+  await author.locator('[name="confirm"]').fill("숨기기");
   await author.getByRole("button", { name: "저장하기", exact: true }).click();
   await expect(author).toHaveURL(/\/chat$/);
   await expect(author.locator(".chat-item")).toHaveCount(6);

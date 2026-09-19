@@ -511,3 +511,48 @@ test("Leaving chat hides only the caller, preserves history and resurfaces on in
     true,
   );
 });
+
+test("Chat closure blocks both participants and keeps the record", () => {
+  const d = db();
+  const p = post(d);
+  const chat = act(
+    d,
+    provider(),
+    "conversation.create",
+    { targetId: p.id },
+    now,
+  ) as Row;
+  assert.throws(() =>
+    act(d, outsider, "conversation.close", { id: chat.id }, now),
+  );
+  act(d, customer, "conversation.close", { id: chat.id }, now + 1);
+  for (const u of [customer, provider()]) {
+    assert.throws(
+      () =>
+        act(
+          d,
+          u,
+          "message.create",
+          { conversationId: chat.id, body: "blocked" },
+          now + 2,
+        ),
+      /종료된/,
+    );
+    assert.equal(
+      snapshot(d, u).rows.some((r) => r.id === chat.id),
+      true,
+    );
+  }
+  act(d, provider(), "conversation.create", { targetId: p.id }, now + 3);
+  assert.throws(
+    () =>
+      act(
+        d,
+        provider(),
+        "message.create",
+        { conversationId: chat.id, body: "reopen" },
+        now + 4,
+      ),
+    /종료된/,
+  );
+});

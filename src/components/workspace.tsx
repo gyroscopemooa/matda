@@ -1903,25 +1903,32 @@ export default function Workspace() {
                   disabled={busy}
                   onClick={() =>
                     openForm(
-                      "채팅방 나가기",
+                      selected.closedAt ? "목록에서 숨기기" : "대화 종료",
                       [
                         {
                           key: "confirm",
-                          label:
-                            "내 목록에서 숨깁니다. 새 메시지가 오면 다시 나타납니다. 나가려면 ‘나가기’를 입력하세요.",
+                          label: selected.closedAt
+                            ? "내 목록에서만 숨깁니다. ‘숨기기’를 입력하세요."
+                            : "양쪽 모두 더 이상 메시지를 보낼 수 없습니다. 기록은 유지됩니다. ‘종료’를 입력하세요.",
                           required: true,
                         },
                       ],
                       async (v) => {
-                        if (v.confirm !== "나가기")
-                          throw new Error("나가기를 입력해주세요.");
-                        await action("conversation.leave", { id: selected.id });
-                        router.push("/chat");
+                        const word = selected.closedAt ? "숨기기" : "종료";
+                        if (v.confirm !== word)
+                          throw new Error(`${word}를 입력해주세요.`);
+                        await action(
+                          selected.closedAt
+                            ? "conversation.leave"
+                            : "conversation.close",
+                          { id: selected.id },
+                        );
+                        if (selected.closedAt) router.push("/chat");
                       },
                     )
                   }
                 >
-                  나가기
+                  {selected.closedAt ? "목록에서 숨기기" : "대화 종료"}
                 </button>
                 <h2>{chatPartner(selected)}</h2>
                 <Link
@@ -1960,32 +1967,45 @@ export default function Workspace() {
                     </div>
                   ))}
               </div>
-              <form
-                className="inline-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const f = e.currentTarget;
-                  run(async () => {
-                    await action("message.create", {
-                      conversationId: selected.id,
-                      body: new FormData(f).get("body"),
-                    });
-                    f.reset();
-                  }, "");
-                }}
-              >
-                <input
-                  name="body"
-                  aria-label="메시지"
-                  placeholder="메시지를 입력하세요"
-                  required
-                  maxLength={4000}
-                />
-                <button className="primary" aria-label="보내기" disabled={busy}>
-                  <Send size={18} />
-                  <span>보내기</span>
-                </button>
-              </form>
+              {selected.closedAt ? (
+                <div className="chat-ended" role="status">
+                  {selected.closedBy === user.id ? "내가" : "상대방이"}{" "}
+                  {date(str(selected.closedAt))} 대화를 종료했습니다. 더 이상
+                  메시지를 보낼 수 없습니다. 기존 기록은 보관되며 자동 삭제되지
+                  않습니다.
+                </div>
+              ) : (
+                <form
+                  className="inline-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const f = e.currentTarget;
+                    run(async () => {
+                      await action("message.create", {
+                        conversationId: selected.id,
+                        body: new FormData(f).get("body"),
+                      });
+                      f.reset();
+                    }, "");
+                  }}
+                >
+                  <input
+                    name="body"
+                    aria-label="메시지"
+                    placeholder="메시지를 입력하세요"
+                    required
+                    maxLength={4000}
+                  />
+                  <button
+                    className="primary"
+                    aria-label="보내기"
+                    disabled={busy}
+                  >
+                    <Send size={18} />
+                    <span>보내기</span>
+                  </button>
+                </form>
+              )}
             </section>
           )}
         </div>
@@ -2579,6 +2599,31 @@ export default function Workspace() {
       else setToast("삭제되었거나 더 이상 볼 수 없는 내용입니다.");
     }, "");
   }
+  function notificationPreview(n: Row) {
+    const source = n.sourceId
+      ? rows.find((r) => r.id === n.sourceId)
+      : rows
+          .filter(
+            (r) =>
+              ((r.kind === "message" && r.conversationId === n.targetId) ||
+                (r.kind === "comment" && r.postId === n.targetId)) &&
+              r.ownerId !== user?.id &&
+              Date.parse(r.createdAt) <= Date.parse(n.createdAt),
+          )
+          .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+    if (
+      !source ||
+      source.status === "hidden" ||
+      !source.body ||
+      !/댓글|메시지/.test(str(n.message))
+    )
+      return null;
+    return (
+      <span className="notification-preview">
+        {str(source.authorName) || "이웃"} · {str(source.body).slice(0, 100)}
+      </span>
+    );
+  }
   function notifications() {
     return (
       <>
@@ -2594,7 +2639,10 @@ export default function Workspace() {
                   onClick={() => openNotification(n)}
                 >
                   <Bell size={20} />
-                  <span>{str(n.message)}</span>
+                  <span>
+                    {str(n.message)}
+                    {notificationPreview(n)}
+                  </span>
                   <small>{n.read ? "읽음" : "새 알림"}</small>
                 </button>
               ))
@@ -2922,6 +2970,7 @@ export default function Workspace() {
                           onClick={() => openNotification(n)}
                         >
                           <span>{str(n.message)}</span>
+                          {notificationPreview(n)}
                           <small>
                             {n.read ? "읽음" : "새 알림"} · {date(n.createdAt)}
                           </small>

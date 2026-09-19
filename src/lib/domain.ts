@@ -284,12 +284,17 @@ export function act(
     Object.assign(row, data, { updatedAt: new Date(now).toISOString() });
   const emit = (event: string, targetId: string) =>
     add(db, user, "event", { event, targetId }, now);
-  const notify = (ownerId: string, message: string, targetId: string) =>
+  const notify = (
+    ownerId: string,
+    message: string,
+    targetId: string,
+    sourceId?: string,
+  ) =>
     add(
       db,
       { ...user, id: ownerId },
       "notification",
-      { message, targetId, read: false },
+      { message, targetId, sourceId, read: false },
       now,
     );
   switch (action) {
@@ -425,7 +430,7 @@ export function act(
         },
         now,
       );
-      notify(post.ownerId, "새 댓글이 도착했어요.", post.id);
+      notify(post.ownerId, "새 댓글이 도착했어요.", post.id, row.id);
       emit("comment_created", row.id);
       return row;
     }
@@ -514,6 +519,8 @@ export function act(
       const chat = find(db, input.conversationId, "conversation");
       if (!canRead(db, chat, user))
         throw new AppError("채팅 참여자만 이용할 수 있습니다.", 403);
+      if (chat.closedAt)
+        throw new AppError("종료된 대화에는 메시지를 보낼 수 없습니다.", 409);
       const participants = chat.participants as string[];
       if (
         db.rows.some(
@@ -537,8 +544,25 @@ export function act(
         now,
       );
       for (const id of participants)
-        if (id !== user.id) notify(id, "새 메시지가 도착했어요.", chat.id);
+        if (id !== user.id)
+          notify(id, "새 메시지가 도착했어요.", chat.id, row.id);
       return row;
+    }
+    case "conversation.close": {
+      const chat = get("conversation");
+      if (!canRead(db, chat, user))
+        throw new AppError("접근 권한이 없습니다.", 403);
+      if (!chat.closedAt) {
+        update(chat, {
+          closedAt: new Date(now).toISOString(),
+          closedBy: user.id,
+          leftAtBy: {},
+        });
+        for (const id of chat.participants as string[])
+          if (id !== user.id)
+            notify(id, "상대방이 대화를 종료했어요.", chat.id);
+      }
+      return { ok: true };
     }
     case "conversation.leave":
     case "conversation.read": {

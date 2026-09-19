@@ -44,6 +44,9 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
       await readFile("supabase/migrations/0008_chat_leave.sql", "utf8"),
     );
     await db.exec(
+      await readFile("supabase/migrations/0009_chat_close_preview.sql", "utf8"),
+    );
+    await db.exec(
       `insert into auth.users values('${a}'),('${b}'),('${c}');insert into community_admins values('${c}');`,
     );
     for (const id of [a, b, c]) {
@@ -151,6 +154,10 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
       /Not a participant/,
     );
     await assert.rejects(
+      db.exec(`select community_close_chat('${chat}')`),
+      /Not a participant/,
+    );
+    await assert.rejects(
       db.exec(`select community_read_chat('${chat}')`),
       /Not a participant/,
     );
@@ -195,6 +202,22 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
       db.exec(`update notifications set message='forged'`),
       /permission denied/,
     );
+    await db.exec(`select community_close_chat('${chat}')`);
+    await assert.rejects(
+      db.exec(
+        `insert into messages(conversation_id,sender_id,body) values('${chat}','${a}','종료 후 메시지')`,
+      ),
+      /Conversation closed/,
+    );
+    await as(b);
+    await assert.rejects(
+      db.exec(
+        `insert into messages(conversation_id,sender_id,body) values('${chat}','${b}','종료 후 답장')`,
+      ),
+      /Conversation closed/,
+    );
+    assert.equal(await count("messages"), 1);
+    await as(a);
     await db.exec(`insert into blocks values('${a}','${b}')`);
     await as(b);
     await assert.rejects(
@@ -205,7 +228,7 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
       db.exec(
         `insert into messages(conversation_id,sender_id,body) values('${chat}','${b}','차단 우회')`,
       ),
-      /row-level security/,
+      /row-level security|Conversation closed/,
     );
     await assert.rejects(
       db.exec(
