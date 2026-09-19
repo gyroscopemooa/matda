@@ -2619,3 +2619,18 @@ button.admin-inline-delete:hover {
 .guide-admin input[type="checkbox"] { width:auto; margin-right:8px; }
 .guide-admin .guide-actions { flex-wrap:wrap; margin-top:16px; }
 .guide-detail p,.guide-detail a { overflow-wrap:anywhere; }
+
+.coming-soon { padding:48px 28px; max-width:800px; margin:24px auto; }
+.coming-soon h1 { margin:12px 0 24px; }
+.coming-soon p { color:#61738e; line-height:1.8; }
+.coming-soon .guide-actions { margin-top:28px; flex-wrap:wrap; align-items:center; }
+.desktop-nav { gap:18px; }
+@media(max-width:767px) {
+  .header { height:122px; }
+  .header-inner { display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-rows:72px 50px; gap:0; }
+  .header-tools { grid-column:2; grid-row:1; justify-self:end; }
+  .desktop-nav { display:flex; grid-column:1 / -1; grid-row:2; width:100%; min-width:0; overflow-x:auto; gap:20px; height:50px; scrollbar-width:none; }
+  .desktop-nav > a { flex-shrink:0; height:50px; font-size:13px; white-space:nowrap; }
+  .desktop-nav small { font-size:9px; }
+  .coming-soon { padding:28px 20px; margin:8px 0; }
+}

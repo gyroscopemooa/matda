@@ -64,6 +64,7 @@ import {
 } from "lucide-react";
 import {
   siteConfig,
+  isReleasedPath,
   flags,
   categories,
   businessCategories,
@@ -170,7 +171,8 @@ export default function Workspace({
 }) {
   const path = usePathname();
   const router = useRouter();
-  const biz = path.startsWith("/biz");
+  const preparing = !isReleasedPath(path);
+  const biz = path.startsWith("/biz") && !preparing;
   const [data, setData] = useState<Snapshot>({
     user: null,
     rows: [],
@@ -554,16 +556,8 @@ export default function Workspace({
     { href: "/guides", label: "해죠 가이드" },
     { href: "/quotes", label: "견적받기" },
     { href: "/providers", label: "업체찾기" },
-    { href: "/biz", label: "기업서비스", badge: "BIZ" },
-  ].filter((n) =>
-    n.href === "/quotes"
-      ? flags.quotes
-      : n.href === "/providers"
-        ? flags.providers
-        : n.href === "/biz"
-          ? flags.biz
-          : true,
-  );
+    { href: "/biz", label: "맡다 비즈", badge: "BIZ" },
+  ];
   const posts = rows
     .filter(
       (r) =>
@@ -3152,37 +3146,65 @@ export default function Workspace({
     // Resume the visitor's explicit request once authentication completes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
-  const content =
-    path === "/guides" || path.startsWith("/guides/") ? (
-      <GuideLibrary
-        articles={initialGuides}
-        slug={path.split("/")[2]}
-        onRequest={requestFromGuide}
-      />
-    ) : selectedPost ? (
-      detail(selectedPost)
-    ) : path.startsWith("/posts/") ? (
-      empty("글을 찾을 수 없어요", "삭제되었거나 접근 권한이 없는 글입니다.")
-    ) : path.startsWith("/providers") ? (
-      providers()
-    ) : path.startsWith("/my") ? (
-      my()
-    ) : path.startsWith("/chat") ? (
-      chats()
-    ) : path.startsWith("/notifications") ? (
-      notifications()
-    ) : path.startsWith("/biz/rfqs") ? (
-      procurement()
-    ) : path.startsWith("/biz/tenders") ? (
-      procurement(true)
-    ) : path.startsWith("/biz/contracts") ? (
-      contracts()
-    ) : path.startsWith("/admin") ? (
-      admin()
-    ) : (
-      feed()
-    );
-  const isFeed = ["/", "/community", "/quotes", "/biz"].includes(path);
+  const content = preparing ? (
+    <section className="panel coming-soon">
+      <span className="eyebrow">COMING SOON</span>
+      <h1>
+        {path === "/biz"
+          ? "맡다 비즈"
+          : path === "/providers"
+            ? "업체찾기"
+            : "견적받기"}
+      </h1>
+      <h2>더 좋은 연결을 준비하고 있어요.</h2>
+      <p>
+        {path === "/biz"
+          ? "사업장에 필요한 전문업체를 찾고, 제안을 비교할 수 있는 기업 서비스를 준비 중입니다."
+          : path === "/providers"
+            ? "필요한 분야의 서비스 제공자를 살펴보고 비교할 수 있도록 준비 중입니다."
+            : "필요한 일을 한 번 올리고 여러 제안과 견적을 비교할 수 있도록 준비 중입니다."}
+      </p>
+      <p>
+        지금은 커뮤니티에서 필요한 일을 올리거나 해죠 가이드로 준비해보세요.
+      </p>
+      <div className="guide-actions">
+        <Link className="primary" href="/community">
+          커뮤니티 둘러보기
+        </Link>
+        <Link href="/guides">해죠 가이드</Link>
+      </div>
+    </section>
+  ) : path === "/guides" || path.startsWith("/guides/") ? (
+    <GuideLibrary
+      articles={initialGuides}
+      slug={path.split("/")[2]}
+      onRequest={requestFromGuide}
+    />
+  ) : selectedPost ? (
+    detail(selectedPost)
+  ) : path.startsWith("/posts/") ? (
+    empty("글을 찾을 수 없어요", "삭제되었거나 접근 권한이 없는 글입니다.")
+  ) : path.startsWith("/providers") ? (
+    providers()
+  ) : path.startsWith("/my") ? (
+    my()
+  ) : path.startsWith("/chat") ? (
+    chats()
+  ) : path.startsWith("/notifications") ? (
+    notifications()
+  ) : path.startsWith("/biz/rfqs") ? (
+    procurement()
+  ) : path.startsWith("/biz/tenders") ? (
+    procurement(true)
+  ) : path.startsWith("/biz/contracts") ? (
+    contracts()
+  ) : path.startsWith("/admin") ? (
+    admin()
+  ) : (
+    feed()
+  );
+  const isFeed =
+    !preparing && ["/", "/community", "/quotes", "/biz"].includes(path);
   return (
     <>
       <a className="skip-link" href="#main">
@@ -3215,7 +3237,11 @@ export default function Workspace({
                 href={n.href}
               >
                 {n.label}
-                {n.badge && <small>{n.badge}</small>}
+                {!isReleasedPath(n.href) ? (
+                  <small>준비 중</small>
+                ) : (
+                  n.badge && <small>{n.badge}</small>
+                )}
               </Link>
             ))}
           </nav>
@@ -3410,7 +3436,7 @@ export default function Workspace({
           </div>
         </aside>
         <main id="main">
-          {path === "/guides" || path.startsWith("/guides/") ? (
+          {preparing || path === "/guides" || path.startsWith("/guides/") ? (
             content
           ) : error ? (
             <section className="panel empty" role="alert">

@@ -26,8 +26,14 @@ const titles: Record<string, string> = {
 type Props = { params: Promise<{ path?: string[] }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const parts = (await params).path || [];
-  if (!isReleasedPath("/" + parts.join("/"))) notFound();
-  let title = titles[parts.join("/")];
+  if (
+    !isReleasedPath("/" + parts.join("/")) &&
+    !(parts.length === 1 && ["quotes", "providers", "biz"].includes(parts[0]))
+  )
+    notFound();
+  let title = !isReleasedPath("/" + parts.join("/"))
+    ? `${parts[0] === "biz" ? "맡다 비즈" : parts[0] === "quotes" ? "견적받기" : "업체찾기"} · 준비 중`
+    : titles[parts.join("/")];
   let description =
     "가벼운 글쓰기부터 업체와의 연결까지, 같은 공간에서 시작하세요.";
   if (parts.length === 2 && ["posts", "providers"].includes(parts[0])) {
@@ -94,7 +100,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 export default async function Page({ params }: Props) {
   const parts = (await params).path || [];
-  if (!isReleasedPath("/" + parts.join("/"))) notFound();
+  if (
+    !isReleasedPath("/" + parts.join("/")) &&
+    !(parts.length === 1 && ["quotes", "providers", "biz"].includes(parts[0]))
+  )
+    notFound();
   if (
     parts.length &&
     !(parts.join("/") in titles) &&
