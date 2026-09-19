@@ -287,3 +287,7 @@ PC 목록 약 5개 높이(510px), 모바일 약 3개 높이에서 독립 스크�
 ## 2026-09-20 Google 전용 로그인
 운영 Supabase 로그인 UI는 Google 버튼만 표시. 이메일 signup/login/reset/update-password API는403 차단, logout/세션조회/Google OAuth 유지. 초기 로딩 중 이메일 폼 노출 방지. 기존 사용자/게시물 삭제 없음. 격리된 local adapter의 테스트 가입은 유지. 원격 모드 로컬 UI와4개 API403 검증, 타입/린트 통과. Supabase Sign In/Providers의 Email Provider 비활성화는 사용자 설정 필요.
 
+
+## 2026-09-20 관리자 삭제 배치 조정
+사용자 요청대로 글 목록/상세/댓글 작성자 닉네임 옆에 작은 관리자 삭제 버튼 배치. 일반 작성자 삭제와 구분되는 라벨 유지, 줄바꿈 허용. 타입 및 관리자 UI 삭제 E2E 통과.
+

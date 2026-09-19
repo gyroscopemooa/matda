@@ -569,6 +569,19 @@ export default function Workspace() {
       "삭제 처리",
     );
   }
+  function adminControl(target: Row, leavePost = false) {
+    if (user?.role !== "admin") return null;
+    return (
+      <button
+        className="admin-inline-delete"
+        type="button"
+        disabled={busy}
+        onClick={() => moderateHere(target, leavePost)}
+      >
+        관리자 삭제
+      </button>
+    );
+  }
   function card(post: Row) {
     const photos = Array.isArray(post.images) ? post.images : [];
     const comments = rows.filter(
@@ -584,16 +597,6 @@ export default function Workspace() {
           <span className="muted">
             {post.sample ? "예시 이야기" : date(post.createdAt)}
           </span>
-          {user?.role === "admin" && (
-            <button
-              type="button"
-              className="text-button danger"
-              disabled={busy}
-              onClick={() => moderateHere(post)}
-            >
-              관리자 삭제
-            </button>
-          )}
         </div>
         <div className={"post-preview" + (photos.length ? " with-photos" : "")}>
           <Link className="post-link" href={"/posts/" + post.id}>
@@ -641,7 +644,10 @@ export default function Workspace() {
           <span className="avatar">
             <Avatar value={str(post.authorAvatar) || "sun"} />
           </span>
-          <span>{str(post.authorName)}</span>
+          <span className="author-with-tools">
+            {str(post.authorName)}
+            {adminControl(post)}
+          </span>
           <span className="location">
             <MapPin size={13} />
             {str(post.region)}
@@ -982,7 +988,10 @@ export default function Workspace() {
               <span className="avatar">
                 <Avatar value={str(post.authorAvatar) || "sun"} />
               </span>
-              <span>{str(post.authorName)}</span>
+              <span className="author-with-tools">
+                {str(post.authorName)}
+                {adminControl(post, true)}
+              </span>
               <time dateTime={post.createdAt}>{date(post.createdAt)}</time>
             </div>
           </div>
@@ -1011,16 +1020,6 @@ export default function Workspace() {
           <div className="body-text">{str(post.body)}</div>
           <p className="muted">희망 일정: {scheduleLabel(post)}</p>
           <div className="actions">
-            {user?.role === "admin" && (
-              <button
-                type="button"
-                className="danger"
-                disabled={busy}
-                onClick={() => moderateHere(post, true)}
-              >
-                관리자 삭제
-              </button>
-            )}
             {isOwner ? (
               <>
                 <button onClick={() => createPost(post)}>수정</button>
@@ -1292,18 +1291,12 @@ export default function Workspace() {
             )
             .map((c) => (
               <div className="comment" key={c.id}>
-                <b>{str(c.authorName)}</b>
+                <div className="author-with-tools">
+                  <b>{str(c.authorName)}</b>
+                  {adminControl(c)}
+                </div>
                 <p>{str(c.body)}</p>
-                {user?.role === "admin" && (
-                  <button
-                    type="button"
-                    className="text-button danger"
-                    disabled={busy}
-                    onClick={() => moderateHere(c)}
-                  >
-                    관리자 삭제
-                  </button>
-                )}
+
                 <button
                   className="text-button"
                   onClick={() =>

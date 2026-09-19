@@ -2481,3 +2481,27 @@ button.region-picker span {
     gap: 8px;
   }
 }
+
+.author-with-tools {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+button.admin-inline-delete {
+  min-height: 28px;
+  padding: 3px 6px;
+  font-size: 10px;
+  line-height: 1.3;
+  color: #a33b45;
+  border: 1px solid #efdce0;
+  border-radius: 6px;
+  background: white;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+button.admin-inline-delete:hover {
+  background: #fff5f5;
+}
