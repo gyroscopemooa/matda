@@ -430,6 +430,26 @@ test("Phase 7: administrator report/verification review, account restriction and
       )
       .toBe("hidden");
     await page
+      .locator(`[data-managed-id="${post.id}"]`)
+      .getByRole("button", { name: "복원", exact: true })
+      .click();
+    await expect
+      .poll(
+        async () =>
+          (await rows(seller.request)).find((r) => r.id === post.id)?.status,
+      )
+      .toBe("published");
+    await page
+      .locator(`[data-managed-id="${post.id}"]`)
+      .getByRole("button", { name: "삭제 처리(숨김)", exact: true })
+      .click();
+    await expect
+      .poll(
+        async () =>
+          (await rows(seller.request)).find((r) => r.id === post.id)?.status,
+      )
+      .toBe("hidden");
+    await page
       .locator(`[data-entity-id="${report.id}"]`)
       .getByRole("button", { name: "신고 처리완료", exact: true })
       .click();

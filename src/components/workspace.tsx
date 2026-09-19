@@ -1551,6 +1551,11 @@ export default function Workspace() {
             로그아웃
           </button>
         </section>
+        {user.role === "admin" && (
+          <Link className="primary" href="/admin">
+            관리자 대시보드
+          </Link>
+        )}
         <div className="stats">
           <div>
             <b>{own("post").length}</b>
@@ -2578,6 +2583,55 @@ export default function Workspace() {
     return (
       <>
         <h1>운영 관리</h1>
+        <p className="muted">
+          게시글·댓글 숨김은 일반 이용자에게 보이지 않게 처리하며 복원할 수
+          있습니다.
+        </p>
+        <section className="panel">
+          <h2>게시글·댓글 관리</h2>
+          <input
+            aria-label="관리 콘텐츠 검색"
+            placeholder="제목·내용·작성자 검색"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {rows
+            .filter(
+              (r) =>
+                ["post", "comment"].includes(r.kind) &&
+                (str(r.title) + str(r.body) + str(r.authorName)).includes(
+                  search,
+                ),
+            )
+            .slice()
+            .reverse()
+            .map((r) => (
+              <div className="panel" key={r.id} data-managed-id={r.id}>
+                <b>
+                  {r.kind === "post" ? "게시글" : "댓글"} · {str(r.authorName)}{" "}
+                  · {str(r.status || "published")}
+                </b>
+                <p className="chat-title">{str(r.title || r.body)}</p>
+                <Link
+                  href={"/posts/" + (r.kind === "post" ? r.id : str(r.postId))}
+                >
+                  내용 보기
+                </Link>{" "}
+                <button
+                  onClick={() =>
+                    run(() =>
+                      action("admin.moderate", {
+                        id: r.id,
+                        status: r.status === "hidden" ? "published" : "hidden",
+                      }),
+                    )
+                  }
+                >
+                  {r.status === "hidden" ? "복원" : "삭제 처리(숨김)"}
+                </button>
+              </div>
+            ))}
+        </section>
         <section className="panel">
           <h2>회원 관리</h2>
           <input
