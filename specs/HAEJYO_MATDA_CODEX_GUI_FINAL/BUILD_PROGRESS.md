@@ -250,3 +250,9 @@
 
 ## 2026-09-20 Supabase Storage 전환 준비
 사용자가 community-images 버킷 생성 보고. 기본 사진 저장소를 Supabase Storage로 변경하며 R2 코드는 MEDIA_STORAGE_PROVIDER=r2로 유지. 파일별 storage_provider를 기록하여 기존 R2 사진은 R2로 조회한다. 공개 사진 리다이렉트는 공개 메타데이터 전용 RPC를 사용한다. 사진 2MiB 제한, JWT로 본인 경로 업로드/삭제, 업로드 metadata 실패 시 파일 정리. migration 0007_supabase_storage.sql을 SQL Editor에서 한 번 적용해야 한다(통합 UPGRADE_COMMUNITY 재실행 금지). 실제 원격 업로드는 SQL 적용 및 로그인 연결 후 검증해야 한다. local adapter는 유지했다. 28개 단위/DB 테스트에 Storage 소유자 격리·삭제 권한 및 새 SQL 검증 포함, 통과.
+
+## 2026-09-20 Storage SQL 원격 반영 확인
+사용자 성공 보고 후 공개 이미지 RPC community_public_image를 비로그인으로 호출하여 정상 응답/존재하지 않는 ID의 빈 결과 확인. profiles/posts/comments 스키마 정상, media 직접 조회는 비로그인 권한 차단(42501). migration0007의 RPC 배포 확인이며 실제 이미지 업로드·소유자 삭제·사진 표시 실검증 완료를 의미하지 않는다. 현재 앱은 local adapter 유지. 다음 작업은 원격 모드에서 로그인 및 사진 업로드 검증이다.
+
+## 2026-09-20 원격 미리보기 전환
+.env.local의 DATA_ADAPTER/MEDIA_STORAGE_PROVIDER를 supabase로 지정하고 3107 서버 재시작. 비로그인 /api/app 200, mode=supabase, rows=0 확인. 로컬 기존 DB 보존 및 자동 이전 없음. 비로그인 media 전체조회 제거(공개 사진 조회는 전용 RPC). 회귀 테스트28개 통과. 실제 로그인 사진 업로드는 사용자 세션 테스트 대기. 원격 관리자 역할은 별도 부여 필요.

@@ -77,9 +77,9 @@ export async function loadCommunity(
     "profiles",
     "posts",
     "comments",
-    "media",
     ...(identity
       ? [
+          "media",
           "conversations",
           "conversation_members",
           "messages",
@@ -153,7 +153,7 @@ export async function loadCommunity(
       ...author(c.author_id),
       postId: c.post_id,
     });
-  for (const m of lists.media)
+  for (const m of lists.media || [])
     rows.push({
       ...row("media", m, String(m.owner_id)),
       name: "사진",
@@ -407,3 +407,4 @@ export async function communityAction(
   }
   return result;
 }
+
