@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.name}`,
   },
   description:
-    "가까운 이웃과 나누는 질문부터 믿을 수 있는 업체와의 연결까지. 글 하나로 시작하세요.",
+    "청소부터 웹·앱 제작까지, 맡기고 싶은 일과 궁금한 점을 나누는 요청형 커뮤니티. 해죠에 올려보세요.",
   robots: { index: false, follow: false },
 };
 export default function RootLayout({

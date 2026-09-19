@@ -458,6 +458,8 @@ main {
 }
 .welcome h1 {
   font-size: 26px;
+  word-break: keep-all;
+  text-wrap: balance;
 }
 .welcome p {
   color: #7d8999;
@@ -554,6 +556,57 @@ main {
 .feed {
   display: grid;
   gap: 11px;
+}
+.service-mode-picker {
+  border: 0;
+  padding: 0;
+  margin: 12px 0;
+}
+.service-mode-picker legend {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.service-mode-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  font-size: 13px;
+}
+.service-mode-options label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.service-mode-options input {
+  width: auto;
+  min-height: auto;
+  accent-color: var(--blue);
+}
+.service-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: -5px 0 16px;
+}
+.service-filter button {
+  min-height: 36px;
+  border-radius: 18px;
+  padding: 6px 13px;
+  font-size: 12px;
+}
+.service-filter button[aria-pressed="true"] {
+  color: var(--blue);
+  background: #eaf2ff;
+  border-color: #bad3ff;
+}
+.service-filter > span {
+  width: 100%;
+  font-size: 11px;
+  color: #7486a0;
+  padding: 3px 5px;
 }
 .post-card {
   display: block;

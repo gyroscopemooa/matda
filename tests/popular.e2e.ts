@@ -50,11 +50,11 @@ test("Free posts and regional popular list", async ({ page, playwright }) => {
   }
   await page.goto("/community");
   await expect(
-    page.getByRole("region", { name: "우리 동네 인기글" }),
+    page.getByRole("region", { name: "이번 주 인기글" }),
   ).toContainText("야음동 산책 이야기 인기글 검증");
   await page
-    .getByRole("region", { name: "우리 동네 인기글" })
-    .getByRole("link")
+    .getByRole("region", { name: "이번 주 인기글" })
+    .locator(`a[href="/posts/${id}"]`)
     .click();
   await expect(page).toHaveURL(new RegExp(id!));
   await page.goto("/community");
@@ -64,6 +64,6 @@ test("Free posts and regional popular list", async ({ page, playwright }) => {
   await page.getByLabel("시/도", { exact: true }).selectOption("부산광역시");
   await page.getByRole("button", { name: "적용하기", exact: true }).click();
   await expect(
-    page.getByRole("region", { name: "우리 동네 인기글" }),
+    page.getByRole("region", { name: "이번 주 인기글" }),
   ).toHaveCount(0);
 });

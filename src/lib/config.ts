@@ -2,7 +2,7 @@ export const siteConfig = {
   name: "해죠",
   businessName: "MATDA BIZ",
   parent: "MATDA",
-  tagline: "일상의 작은 요청, 더 나은 연결",
+  tagline: "필요한 일에서 시작되는 연결",
   defaultRegion: "",
 };
 export const releasePhase = Number(
@@ -29,13 +29,29 @@ export const quotePolicy = {
   requireAcceptance: process.env.QUOTE_REQUIRE_PROVIDER_ACCEPTANCE === "true",
 };
 export const categories = [
-  "청소",
+  "청소·관리",
   "이사·운송",
   "수리·설치",
-  "인테리어·시공",
+  "공간·시공",
   "자동차",
+  "제작·디지털",
   "기타",
 ];
+const categoryAliases: Record<string, string> = {
+  청소: "청소·관리",
+  "인테리어·시공": "공간·시공",
+};
+export const normalizeCategory = (value: string) =>
+  categoryAliases[value] || value;
+export const categoryExamples: Record<string, string> = {
+  "청소·관리": "입주·이사청소, 에어컨청소, 정리수납, 방역",
+  "이사·운송": "포장이사, 용달, 화물, 가구 운송, 차량 탁송",
+  "수리·설치": "누수, 전기, 보일러, 에어컨·가전, 도어락",
+  "공간·시공": "인테리어, 도배·장판, 욕실·타일, 페인트, 철거",
+  자동차: "정비, 판금·도색, 썬팅, 블랙박스, 디테일링",
+  "제작·디지털": "웹·앱 개발, 디자인, 로고·상세페이지, 촬영·영상편집",
+  기타: "분류에 없는 맡기고 싶은 일",
+};
 export const businessCategories = [
   "산업안전·보건",
   "전기·에너지",

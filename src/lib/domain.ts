@@ -3,10 +3,12 @@ import { normalizeRegion, validRegion } from "./regions";
 import { randomUUID } from "node:crypto";
 import {
   categories,
+  normalizeCategory,
   businessCategories,
   flags,
   quotePolicy as policy,
 } from "./config";
+import { onlineRegion } from "./service-mode";
 import {
   AppError,
   required,
@@ -171,7 +173,10 @@ export function snapshot(db: Database, user?: User) {
     user: user ? publicUser(user) : null,
     rows: db.rows
       .filter((r) => canRead(db, r, user) && !blocked.includes(r.ownerId))
-      .map((r) => {
+      .map((source) => {
+        const r = source.category
+          ? { ...source, category: normalizeCategory(String(source.category)) }
+          : source;
         if (r.kind === "post" && r.quoteEnabled) {
           const quoteCount = db.rows.filter(
             (q) => q.kind === "quote" && q.postId === r.id,
@@ -267,14 +272,23 @@ export function act(
       const existing = action === "post.update" ? get("post") : undefined;
       if (existing) owned(existing, user);
       const body = required(input.body, "내용");
-      const region = normalizeRegion(required(input.region, "지역", 80));
-      if (!validRegion(region))
+      const serviceMode = String(
+        input.serviceMode || existing?.serviceMode || "local",
+      );
+      if (!["local", "online"].includes(serviceMode))
+        throw new AppError("서비스 방식을 확인해주세요.");
+      const region =
+        serviceMode === "online"
+          ? onlineRegion
+          : normalizeRegion(required(input.region, "지역", 80));
+      if (serviceMode === "local" && !validRegion(region))
         throw new AppError("시/도를 선택하고 지역 조합을 확인해주세요.");
       const type = String(input.type || "request");
-      const category =
+      const category = normalizeCategory(
         type === "request"
           ? required(input.category, "카테고리", 80)
-          : String(input.category || "");
+          : String(input.category || ""),
+      );
       const audience = input.audience === "business" ? "business" : "consumer";
       if (
         category &&
@@ -293,8 +307,9 @@ export function act(
         );
         if (
           requests.length >= policy.activeLimit ||
-          requests.filter((r) => r.category === category).length >=
-            policy.categoryActiveLimit
+          requests.filter(
+            (r) => normalizeCategory(String(r.category)) === category,
+          ).length >= policy.categoryActiveLimit
         )
           throw new AppError(
             "진행 중인 요청 한도에 도달했어요. 기존 요청을 확인해주세요.",
@@ -333,6 +348,7 @@ export function act(
         body,
         title: String(input.title || body.slice(0, 48)).slice(0, 120),
         region,
+        serviceMode,
         category,
         type,
         audience,

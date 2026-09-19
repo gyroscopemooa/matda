@@ -1,6 +1,12 @@
 "use client";
 import { useState } from "react";
-import { postTypes, categories, businessCategories } from "@/lib/config";
+import {
+  postTypes,
+  categories,
+  businessCategories,
+  normalizeCategory,
+  categoryExamples,
+} from "@/lib/config";
 export default function PostKindPicker({
   value = "해줘요",
   category = "",
@@ -11,6 +17,9 @@ export default function PostKindPicker({
   biz?: boolean;
 }) {
   const [kind, setKind] = useState(value);
+  const [selectedCategory, setSelectedCategory] = useState(
+    normalizeCategory(category),
+  );
   return (
     <>
       <label className="field">
@@ -30,7 +39,8 @@ export default function PostKindPicker({
         <select
           name="category"
           required={kind === "해줘요"}
-          defaultValue={category}
+          value={selectedCategory}
+          onChange={(event) => setSelectedCategory(event.target.value)}
         >
           <option value="">
             {kind === "해줘요" ? "분야 선택" : "분야 선택 안 함"}
@@ -39,6 +49,9 @@ export default function PostKindPicker({
             <option key={c}>{c}</option>
           ))}
         </select>
+        {!biz && categoryExamples[selectedCategory] && (
+          <small className="muted">{categoryExamples[selectedCategory]}</small>
+        )}
       </label>
     </>
   );

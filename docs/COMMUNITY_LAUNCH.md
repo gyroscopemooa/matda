@@ -6,7 +6,7 @@
 
 현재 프로젝트는 0001~0003 적용 확인 이력이 있다. **SETUP_DATABASE.sql을 다시 실행하지 않는다.** 변경 전 DB 백업/복원 가능 여부를 확인하고 staging에서 먼저 검증한다.
 
-SQL Editor → New query → `supabase/UPGRADE_COMMUNITY.sql` 전체 실행. 0004의 프로필·사진 metadata·일정·신고·채팅 RPC·RLS와 0005의 Realtime publication 등록을 한 트랜잭션으로 적용한다. 실행 실패 시 전체가 롤백된다. 이미 적용된 파일은 반복 실행하지 않는다. 기존 conversation에 동일 `(created_by, post_id)` 중복이 있으면 unique index 생성이 중단되므로 임의 삭제하지 말고 정리 계획을 먼저 검토한다.
+SQL Editor → New query → `supabase/UPGRADE_COMMUNITY.sql` 전체 실행. 0004의 프로필·사진 metadata·일정·신고·채팅 RPC·RLS와 0005의 Realtime publication 등록, 0006의 카테고리 개편·서비스 방식 컬럼을 한 트랜잭션으로 적용한다. 실행 실패 시 전체가 롤백된다. 이미 적용된 파일은 반복 실행하지 않는다. 0004~0005까지 이미 적용했다면 통합 파일 대신 migrations/0006_request_categories.sql만 실행한다. 기존 conversation에 동일 `(created_by, post_id)` 중복이 있으면 unique index 생성이 중단되므로 임의 삭제하지 말고 정리 계획을 먼저 검토한다.
 
 코드 롤백은 `DATA_ADAPTER=local`로 개발 미리보기만 복구한다. 운영 데이터를 로컬로 옮기거나 migration을 DROP해서 복구하지 않는다. 운영 배포 롤백 시 호환되는 이전 원격 버전 또는 maintenance 화면을 사용한다.
 

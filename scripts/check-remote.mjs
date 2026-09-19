@@ -25,7 +25,7 @@ if (env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
   );
   for (const [table, columns] of [
     ["profiles", "id,avatar,disabled"],
-    ["posts", "id,images,schedule,budget"],
+    ["posts", "id,images,schedule,budget,service_mode"],
     ["comments", "id,status"],
     ["media", "id,object_key,created_at"],
   ]) {

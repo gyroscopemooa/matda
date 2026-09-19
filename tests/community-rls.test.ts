@@ -32,6 +32,9 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
       await readFile("supabase/migrations/0005_community_realtime.sql", "utf8"),
     );
     await db.exec(
+      await readFile("supabase/migrations/0006_request_categories.sql", "utf8"),
+    );
+    await db.exec(
       `insert into auth.users values('${a}'),('${b}'),('${c}');insert into community_admins values('${c}');`,
     );
     for (const id of [a, b, c]) {
@@ -41,6 +44,15 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
       );
     }
     await as(a);
+    await db.exec(
+      `insert into posts(author_id,post_type,audience,title,body,region,service_mode,category_id) values('${a}','request','consumer','웹 개발','홈페이지 제작','전국 · 온라인','online','제작·디지털')`,
+    );
+    await assert.rejects(
+      db.exec(
+        `insert into posts(author_id,post_type,audience,title,body,region,service_mode) values('${a}','request','consumer','잘못된 방식','내용','울산','online')`,
+      ),
+      /post_service_region/,
+    );
     await assert.rejects(
       db.exec(
         `insert into organizations(owner_id,name) values('${a}','early BIZ')`,
@@ -163,7 +175,7 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
     await db.exec(
       `reset role;set role anon;select set_config('request.jwt.claim.sub','',false)`,
     );
-    assert.equal(await count("posts"), 0);
+    assert.equal(await count("posts"), 1);
     assert.equal(await count("comments"), 0);
     await db.exec("reset role");
     assert.equal(await count("community_audit"), 2);

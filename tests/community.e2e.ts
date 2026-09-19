@@ -7,7 +7,7 @@ test("Phase 0: desktop/mobile shell, empty search, guest and reload", async ({
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "가까운 이웃과, 더 나은 일상" }),
+    page.getByRole("heading", { name: "필요한 일이 있나요? 일단 올려죠." }),
   ).toBeVisible();
   await expect
     .poll(() => page.locator(".post-card").count())

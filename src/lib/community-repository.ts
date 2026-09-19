@@ -44,19 +44,17 @@ export async function ensureProfile(
       .trim()
       .slice(0, 20) || "새 이웃";
   checked(
-    await client
-      .from("profiles")
-      .upsert(
-        {
-          id: identity.id,
-          display_name: name,
-          region: String(previous?.region || "").slice(0, 80),
-          avatar: ["sun", "leaf", "smile"].includes(previous?.avatar)
-            ? previous.avatar
-            : "sun",
-        },
-        { onConflict: "id", ignoreDuplicates: true },
-      ),
+    await client.from("profiles").upsert(
+      {
+        id: identity.id,
+        display_name: name,
+        region: String(previous?.region || "").slice(0, 80),
+        avatar: ["sun", "leaf", "smile"].includes(previous?.avatar)
+          ? previous.avatar
+          : "sun",
+      },
+      { onConflict: "id", ignoreDuplicates: true },
+    ),
   );
   return checked(
     await client.from("profiles").select("*").eq("id", identity.id).single(),
@@ -141,6 +139,7 @@ export async function loadCommunity(
       ...author(p.author_id),
       type: p.post_type,
       category: p.category_id || "",
+      serviceMode: p.service_mode || "local",
       images: p.images || [],
       quoteEnabled: false,
       scheduleMode: schedule.scheduleMode,
@@ -295,6 +294,7 @@ export async function communityAction(
         title: r.title,
         body: r.body,
         region: r.region,
+        service_mode: r.serviceMode || "local",
         images: r.images,
         budget: r.budget,
         schedule: {
@@ -327,14 +327,12 @@ export async function communityAction(
       break;
     case "comment.create":
       checked(
-        await client
-          .from("comments")
-          .insert({
-            id: r.id,
-            post_id: r.postId,
-            author_id: user.id,
-            body: r.body,
-          }),
+        await client.from("comments").insert({
+          id: r.id,
+          post_id: r.postId,
+          author_id: user.id,
+          body: r.body,
+        }),
       );
       break;
     case "comment.delete":
@@ -350,14 +348,12 @@ export async function communityAction(
       break;
     case "message.create":
       checked(
-        await client
-          .from("messages")
-          .insert({
-            id: r.id,
-            conversation_id: r.conversationId,
-            sender_id: user.id,
-            body: r.body,
-          }),
+        await client.from("messages").insert({
+          id: r.id,
+          conversation_id: r.conversationId,
+          sender_id: user.id,
+          body: r.body,
+        }),
       );
       break;
     case "notification.read":
@@ -380,14 +376,12 @@ export async function communityAction(
       break;
     case "report.create":
       checked(
-        await client
-          .from("reports")
-          .insert({
-            id: r.id,
-            reporter_id: user.id,
-            target_id: input.targetId,
-            reason: r.reason,
-          }),
+        await client.from("reports").insert({
+          id: r.id,
+          reporter_id: user.id,
+          target_id: input.targetId,
+          reason: r.reason,
+        }),
       );
       break;
     case "admin.account":

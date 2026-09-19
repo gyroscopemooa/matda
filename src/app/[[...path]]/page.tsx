@@ -6,8 +6,8 @@ import { siteConfig, isReleasedPath } from "@/lib/config";
 import { remoteEnabled } from "@/lib/community-repository";
 import { createClient } from "@supabase/supabase-js";
 const titles: Record<string, string> = {
-  "": "가까운 이웃과 더 나은 일상",
-  community: "우리 동네 이야기",
+  "": "필요한 일이 있나요? 일단 올려죠",
+  community: "필요한 일과 이야기를 나누는 곳",
   quotes: "간편하게 견적받기",
   providers: "좋은 업체 찾기",
   biz: "기업에 필요한 전문업체 찾기",

@@ -12,6 +12,12 @@ import RotatingBrand from "./rotating-brand";
 import PostKindPicker from "./post-kind-picker";
 import { popularPosts } from "@/lib/popular";
 import RegionPicker from "./region-picker";
+import ServiceLocation from "./service-location";
+import {
+  matchesService,
+  isOnline,
+  type ServiceFilter,
+} from "@/lib/service-mode";
 import SchedulePicker from "./schedule-picker";
 import { scheduleLabel } from "@/lib/schedule";
 import { matchesRegion } from "@/lib/regions";
@@ -38,6 +44,7 @@ import {
   Car,
   Brush,
   Ellipsis,
+  Monitor,
   Heart,
   ImagePlus,
   Send,
@@ -72,6 +79,7 @@ type Snapshot = {
   }[];
 };
 type Field = {
+  serviceMode?: string;
   category?: string;
   biz?: boolean;
   start?: string;
@@ -83,7 +91,6 @@ type Field = {
   required?: boolean;
   value?: string;
 };
-const icons = [Brush, Truck, Wrench, PaintRoller, Car, Ellipsis];
 const bizIcons = [HardHat, Zap, Flame, Building2, Leaf, ClipboardCheck];
 const str = (v: unknown) => String(v ?? "");
 const currency = (v: unknown) => Number(v || 0).toLocaleString("ko-KR") + "원";
@@ -91,6 +98,8 @@ const date = (v: unknown) => new Date(str(v)).toLocaleDateString("ko-KR");
 const typeLabel = (v: unknown) =>
   postTypes[v as keyof typeof postTypes] || str(v);
 function FieldInput({ field }: { field: Field }) {
+  if (field.key === "serviceRegion")
+    return <ServiceLocation region={field.value} mode={field.serviceMode} />;
   if (field.key === "avatar") return <ProfileAvatar value={field.value} />;
   if (field.key === "type")
     return (
@@ -175,6 +184,11 @@ export default function Workspace() {
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
   const [region, setRegion] = useState("전체 지역");
+  const [serviceFilter, setServiceFilter] = useState<ServiceFilter>("all");
+  function chooseServiceFilter(value: ServiceFilter) {
+    setServiceFilter(value);
+    localStorage.setItem("matda-service-filter", value);
+  }
   const [category, setCategory] = useState("전체");
   const [type, setType] = useState("전체");
   const [modal, setModal] = useState<null | {
@@ -215,6 +229,9 @@ export default function Workspace() {
     refresh();
     const saved = localStorage.getItem("matda-region");
     if (saved) setRegion(saved);
+    const savedMode = localStorage.getItem("matda-service-filter");
+    if (savedMode === "all" || savedMode === "local" || savedMode === "online")
+      setServiceFilter(savedMode);
   }, [refresh]);
   useEffect(() => {
     setCategory("전체");
@@ -364,9 +381,16 @@ export default function Workspace() {
           value: str(existing?.body),
         },
         {
-          key: "region",
+          key: biz ? "region" : "serviceRegion",
           label: "지역",
           required: true,
+          serviceMode: existing
+            ? isOnline(existing)
+              ? "online"
+              : "local"
+            : serviceFilter === "online"
+              ? "online"
+              : "local",
           value: str(
             existing?.region || (region !== "전체 지역" ? region : user.region),
           ),
@@ -503,7 +527,9 @@ export default function Workspace() {
         r.status === "published" &&
         r.audience === (biz ? "business" : "consumer") &&
         (category === "전체" || r.category === category) &&
-        matchesRegion(str(r.region), region) &&
+        (biz
+          ? matchesRegion(str(r.region), region)
+          : matchesService(r, serviceFilter, region)) &&
         (type === "전체" || typeLabel(r.type) === type) &&
         (!path.startsWith("/quotes") || r.quoteEnabled) &&
         [r.title, r.body, r.category, r.region]
@@ -615,6 +641,7 @@ export default function Workspace() {
         const selected = values.region || "전체 지역";
         setRegion(selected);
         localStorage.setItem("matda-region", selected);
+        chooseServiceFilter(selected === "전체 지역" ? "all" : "local");
       },
       "적용하기",
       false,
@@ -635,8 +662,8 @@ export default function Workspace() {
           </button>
           <span>
             {region === "전체 지역"
-              ? "보고 싶은 동네를 선택하세요"
-              : "이 지역의 이야기를 보고 있어요"}
+              ? "필요한 서비스 지역을 선택하세요"
+              : "선택한 지역의 요청과 이야기를 봅니다"}
           </span>
           {region !== "전체 지역" && (
             <button
@@ -650,6 +677,29 @@ export default function Workspace() {
             </button>
           )}
         </div>
+        {!biz && (
+          <div className="service-filter" aria-label="서비스 방식 필터">
+            {(
+              [
+                ["all", "전체"],
+                ["local", "지역 서비스"],
+                ["online", "전국·온라인"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                aria-label={`서비스 방식: ${label}`}
+                aria-pressed={serviceFilter === value}
+                onClick={() => chooseServiceFilter(value)}
+              >
+                {label}
+              </button>
+            ))}
+            {serviceFilter === "online" && (
+              <span>선택한 지역과 관계없이 전국·온라인 글을 봅니다.</span>
+            )}
+          </div>
+        )}
         <div className="searchbar">
           <Search size={20} />
           <input
@@ -657,7 +707,7 @@ export default function Workspace() {
             placeholder={
               biz
                 ? "기업에 필요한 서비스를 검색해보세요"
-                : "어떤 도움이 필요하세요? 이웃의 이야기를 검색해보세요"
+                : "어떤 일을 맡기고 싶으세요? 요청과 이야기를 검색해보세요"
             }
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -698,20 +748,30 @@ export default function Workspace() {
   }
   function feed() {
     const popular =
-      !biz && path !== "/quotes" ? popularPosts(rows, region) : [];
+      !biz && path !== "/quotes"
+        ? popularPosts(
+            rows.filter(
+              (r) =>
+                r.kind !== "post" || matchesService(r, serviceFilter, region),
+            ),
+            serviceFilter === "online" ? "전체 지역" : region,
+          )
+        : [];
     return (
       <>
         <section className={`welcome${biz ? "" : " welcome-katuri"}`}>
           <div className="eyebrow">
-            {biz ? "WORK, BETTER TOGETHER" : "HELLO, NEIGHBOR"}
+            {biz ? "WORK, BETTER TOGETHER" : "MAKE IT HAPPEN"}
           </div>
           <h1>
-            {biz ? "기업의 일도, 좋은 연결에서" : "가까운 이웃과, 더 나은 일상"}
+            {biz
+              ? "기업의 일도, 좋은 연결에서"
+              : "필요한 일이 있나요? 일단 올려죠."}
           </h1>
           <p>
             {biz
               ? "우리 회사에 맞는 전문업체를 만나보세요."
-              : "작은 질문부터 필요한 도움까지, 편하게 이야기해요."}
+              : "청소부터 웹·앱 제작까지, 맡기고 싶은 일과 궁금한 점을 나눠보세요."}
           </p>
           <span className="welcome-art" aria-hidden="true">
             {welcomeMeme && !biz ? (
@@ -786,9 +846,9 @@ export default function Workspace() {
           </span>
         </section>
         {popular.length > 0 && (
-          <section className="popular-posts" aria-label="우리 동네 인기글">
+          <section className="popular-posts" aria-label="이번 주 인기글">
             <h2>
-              우리 동네 인기글 <small>· 이번 주</small>
+              인기 있는 이야기 <small>· 이번 주</small>
             </h2>
             <ol>
               {popular.map(({ post, count }, i) => (
@@ -820,7 +880,7 @@ export default function Workspace() {
         {filters()}
         <div className="section-caption">
           <span>
-            {biz ? "기업 요청" : "우리 동네 이야기"} <b>{posts.length}</b>
+            {biz ? "기업 요청" : "요청과 이야기"} <b>{posts.length}</b>
           </span>
           <span>함께 나누면 쉬워져요</span>
         </div>
@@ -2682,7 +2742,7 @@ export default function Workspace() {
       <div className={"layout " + (!isFeed ? "wide-content" : "")}>
         <aside className="sidebar">
           <div className="sidebar-label">
-            {biz ? "기업서비스" : "우리 동네"}
+            {biz ? "기업서비스" : "요청형 커뮤니티"}
           </div>
           <Link
             className={"side-item " + (isFeed ? "active" : "")}
@@ -2712,7 +2772,10 @@ export default function Workspace() {
             {biz ? "기업 서비스 카테고리" : "어떤 도움이 필요하세요?"}
           </div>
           {(biz ? businessCategories : categories).map((c, i) => {
-            const Icon = (biz ? bizIcons : icons)[i % 6];
+            const categoryIcons = biz
+              ? bizIcons
+              : [Brush, Truck, Wrench, PaintRoller, Car, Monitor, Ellipsis];
+            const Icon = categoryIcons[i % categoryIcons.length];
             return (
               <button
                 className={
@@ -2772,7 +2835,7 @@ export default function Workspace() {
               <h2>
                 혼자 고민하지 말고
                 <br />
-                이웃에게 물어보세요
+                해죠에 올려보세요
               </h2>
               <p>
                 필요한 도움, 궁금한 일.
@@ -2849,7 +2912,7 @@ export default function Workspace() {
               <p>
                 서로 존중하는 한마디가
                 <br />
-                안심할 수 있는 동네를 만들어요.
+                믿고 이야기할 수 있는 공간을 만들어요.
               </p>
             </div>
           </aside>
@@ -2947,7 +3010,7 @@ export default function Workspace() {
               }
             }}
           >
-            <p className="muted">가까운 이웃과 좋은 연결을 시작하세요.</p>
+            <p className="muted">필요한 일에서 좋은 연결을 시작하세요.</p>
             {signup && (
               <FieldInput
                 field={{
@@ -3122,7 +3185,7 @@ export default function Workspace() {
                     />
                   </label>
                   <p className="muted small">
-                    사진을 추가하면 이웃이 내용을 이해하기 쉬워요.
+                    사진을 추가하면 요청 내용을 이해하기 쉬워요.
                     <br />
                     사진 없이도 바로 등록할 수 있어요.
                   </p>
