@@ -183,10 +183,25 @@ svg {
   border-radius: 10px;
   text-decoration: none;
 }
-.brand-candidate { display: flex; width: 156px; height: 66px; align-items: center; justify-content: flex-start; }
-.brand-candidate img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: left center; }
+.brand-candidate {
+  display: flex;
+  width: 156px;
+  height: 66px;
+  align-items: center;
+  justify-content: flex-start;
+}
+.brand-candidate img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: left center;
+}
 @media (max-width: 640px) {
-  .brand-candidate { width: 116px; height: 56px; }
+  .brand-candidate {
+    width: 116px;
+    height: 56px;
+  }
 }
 .community-brand .brand-symbol {
   grid-row: 1 / 3;
@@ -212,11 +227,20 @@ svg {
   color: #75849a;
   margin: 0;
 }
-.community-brand:hover .brand-symbol { transform: rotate(-5deg); }
-.community-brand:focus-visible { outline: 3px solid #2474f5; outline-offset: 5px; }
+.community-brand:hover .brand-symbol {
+  transform: rotate(-5deg);
+}
+.community-brand:focus-visible {
+  outline: 3px solid #2474f5;
+  outline-offset: 5px;
+}
 @media (prefers-reduced-motion: reduce) {
-  .community-brand .brand-symbol { transition: none; }
-  .community-brand:hover .brand-symbol { transform: none; }
+  .community-brand .brand-symbol {
+    transition: none;
+  }
+  .community-brand:hover .brand-symbol {
+    transform: none;
+  }
 }
 .biz-brand {
   font-size: 23px;
@@ -584,6 +608,73 @@ main {
 .post-link {
   display: block;
 }
+.post-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.post-preview.with-photos {
+  grid-template-columns: minmax(0, 1fr) 160px;
+}
+.feed-photos {
+  min-width: 0;
+}
+.feed-cover,
+.feed-thumbnails a {
+  display: block;
+}
+.feed-cover img {
+  display: block;
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.feed-thumbnails {
+  display: flex;
+  gap: 5px;
+  margin-top: 7px;
+}
+.feed-thumbnails a {
+  flex: 0 1 36px;
+  min-width: 0;
+}
+.feed-thumbnails img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 5px;
+  object-fit: cover;
+}
+@media (max-width: 600px) {
+  .post-preview {
+    gap: 12px;
+  }
+  .post-preview.with-photos {
+    grid-template-columns: minmax(0, 1fr) 108px;
+  }
+  .feed-cover img {
+    width: 108px;
+    height: 108px;
+    border-radius: 9px;
+  }
+  .feed-thumbnails {
+    gap: 4px;
+  }
+  .feed-thumbnails a {
+    flex-basis: 24px;
+  }
+}
+.post-card .post-link h3,
+.detail-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
 .post-link p,
 .post-card > a + p {
   font-size: 12px;
@@ -836,6 +927,75 @@ main {
   overflow-wrap: anywhere;
   margin: 22px 0;
   line-height: 1.9;
+}
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.detail-classification,
+.detail-author,
+.detail-region {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.detail-classification {
+  flex-wrap: wrap;
+}
+.detail-region {
+  overflow-wrap: anywhere;
+}
+.detail-region svg {
+  flex-shrink: 0;
+}
+.detail-author {
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.detail-author time {
+  font-size: 11px;
+  color: #7c8ca3;
+}
+.detail-title {
+  margin: 20px 0;
+  font-size: 26px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.photo-strip.post-gallery {
+  flex-direction: column;
+  gap: 18px;
+  overflow: visible;
+  margin: 20px 0;
+}
+.post-gallery a {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+}
+.photo-strip.post-gallery img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+}
+@media (max-width: 600px) {
+  .detail-header {
+    gap: 12px;
+  }
+  .detail-title {
+    font-size: 22px;
+  }
+  .detail-author {
+    font-size: 11px;
+  }
 }
 .inline-form {
   display: flex;

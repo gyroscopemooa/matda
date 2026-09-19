@@ -513,6 +513,7 @@ export default function Workspace() {
     )
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   function card(post: Row) {
+    const photos = Array.isArray(post.images) ? post.images : [];
     const comments = rows.filter(
       (r) => r.kind === "comment" && r.postId === post.id,
     ).length;
@@ -526,21 +527,48 @@ export default function Workspace() {
             {post.sample ? "예시 이야기" : date(post.createdAt)}
           </span>
         </div>
-        <Link className="post-link" href={"/posts/" + post.id}>
-          <h3>{str(post.title)}</h3>
-          <p>{str(post.body)}</p>
-        </Link>
-        {Array.isArray(post.images) && post.images.length > 0 && (
-          <div className="photo-strip">
-            {post.images.map((id) => (
-              <img
-                key={str(id)}
-                src={"/api/media?id=" + id}
-                alt="게시글 첨부 사진"
-              />
-            ))}
-          </div>
-        )}
+        <div className={"post-preview" + (photos.length ? " with-photos" : "")}>
+          <Link className="post-link" href={"/posts/" + post.id}>
+            <h3>{str(post.title)}</h3>
+            <p>{str(post.body)}</p>
+          </Link>
+          {photos.length > 0 && (
+            <div className="feed-photos">
+              <a
+                className="feed-cover"
+                href={"/api/media?id=" + encodeURIComponent(str(photos[0]))}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="첫 번째 첨부 사진 크게 보기"
+              >
+                <img
+                  src={"/api/media?id=" + encodeURIComponent(str(photos[0]))}
+                  alt="게시글 첫 번째 사진"
+                  loading="lazy"
+                />
+              </a>
+              {photos.length > 1 && (
+                <div className="feed-thumbnails">
+                  {photos.slice(1).map((id, index) => (
+                    <a
+                      key={str(id)}
+                      href={"/api/media?id=" + encodeURIComponent(str(id))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`첨부 사진 ${index + 2} 크게 보기`}
+                    >
+                      <img
+                        src={"/api/media?id=" + encodeURIComponent(str(id))}
+                        alt={`추가 사진 ${index + 2}`}
+                        loading="lazy"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <div className="post-bottom">
           <span className="avatar">
             <Avatar value={str(post.authorAvatar) || "sun"} />
@@ -842,7 +870,46 @@ export default function Workspace() {
           ← 이야기 목록
         </Link>
         <section className="panel detail">
-          {card(post)}
+          <div className="detail-header">
+            <div className="detail-classification">
+              <span className={"badge " + str(post.type)}>
+                {typeLabel(post.type)}
+              </span>
+              <span className="detail-region">
+                <MapPin size={14} />
+                {str(post.region)}
+              </span>
+            </div>
+            <div className="detail-author">
+              <span className="avatar">
+                <Avatar value={str(post.authorAvatar) || "sun"} />
+              </span>
+              <span>{str(post.authorName)}</span>
+              <time dateTime={post.createdAt}>{date(post.createdAt)}</time>
+            </div>
+          </div>
+          <h1 className="detail-title" title={str(post.title)}>
+            {str(post.title)}
+          </h1>
+          {Array.isArray(post.images) && post.images.length > 0 && (
+            <div className="photo-strip post-gallery">
+              {post.images.map((id, index) => (
+                <a
+                  key={str(id)}
+                  href={"/api/media?id=" + encodeURIComponent(str(id))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`첨부 사진 ${index + 1} 크게 보기`}
+                >
+                  <img
+                    src={"/api/media?id=" + encodeURIComponent(str(id))}
+                    alt={`게시글 첨부 사진 ${index + 1}`}
+                    loading={index === 0 ? "eager" : "lazy"}
+                  />
+                </a>
+              ))}
+            </div>
+          )}
           <div className="body-text">{str(post.body)}</div>
           <p className="muted">희망 일정: {scheduleLabel(post)}</p>
           <div className="actions">

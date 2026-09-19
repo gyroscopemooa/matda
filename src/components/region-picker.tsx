@@ -45,19 +45,12 @@ export default function RegionPicker({
               aria-label="시/군/구"
               value={district}
               disabled={!province || province === "세종특별자치시"}
-              required={required && province !== "세종특별자치시"}
               onChange={(e) => {
                 setDistrict(e.target.value);
                 setTown("");
               }}
             >
-              <option value="">
-                {province === "세종특별자치시"
-                  ? "해당 없음"
-                  : required
-                    ? "시/군/구 선택"
-                    : "전체 시/군/구"}
-              </option>
+              <option value="">{province} 전체</option>
               {Object.keys(districts)
                 .filter(Boolean)
                 .map((d) => (
@@ -75,7 +68,7 @@ export default function RegionPicker({
               disabled={!towns.length}
               onChange={(e) => setTown(e.target.value)}
             >
-              <option value="">전체 읍/면/동</option>
+              <option value="">{district || province} 전체</option>
               {towns.map((t) => (
                 <option key={t}>{t}</option>
               ))}
@@ -88,7 +81,9 @@ export default function RegionPicker({
         name={name}
         value={[province, district, town].filter(Boolean).join(" ")}
       />
-      <small>법정동 기준 · 상세 주소는 입력하지 않아도 됩니다.</small>
+      <small>
+        시/도만 선택해도 됩니다. 시/군/구·읍/면/동은 필요할 때 좁혀주세요.
+      </small>
     </fieldset>
   );
 }

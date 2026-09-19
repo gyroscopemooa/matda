@@ -268,8 +268,8 @@ export function act(
       if (existing) owned(existing, user);
       const body = required(input.body, "내용");
       const region = normalizeRegion(required(input.region, "지역", 80));
-      if (!validRegion(region, true))
-        throw new AppError("시/도와 시/군/구를 올바르게 선택해주세요.");
+      if (!validRegion(region))
+        throw new AppError("시/도를 선택하고 지역 조합을 확인해주세요.");
       const type = String(input.type || "request");
       const category =
         type === "request"
@@ -719,7 +719,7 @@ export function act(
       const region = input.region
         ? normalizeRegion(required(input.region, "지역", 80))
         : "";
-      if (region && !validRegion(region, true))
+      if (region && !validRegion(region))
         throw new AppError("지역을 올바르게 선택해주세요.");
       user.name = name;
       user.avatar = avatar;
@@ -741,7 +741,7 @@ export function act(
     }
     case "profile.region": {
       const region = normalizeRegion(required(input.region, "지역", 80));
-      if (!validRegion(region, true))
+      if (!validRegion(region))
         throw new AppError("지역을 올바르게 선택해주세요.");
       user.region = region;
       return { ok: true };
