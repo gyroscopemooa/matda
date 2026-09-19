@@ -550,10 +550,30 @@ export default function Workspace() {
           .includes(search.toLowerCase()),
     )
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  function moderateHere(target: Row, leavePost = false) {
+    openForm(
+      "관리자 삭제",
+      [
+        {
+          key: "confirm",
+          label:
+            "공개 화면에서 숨깁니다. 관리자 대시보드에서 복원할 수 있습니다. ‘삭제’를 입력하세요.",
+          required: true,
+        },
+      ],
+      async (v) => {
+        if (v.confirm !== "삭제") throw new Error("삭제를 입력해주세요.");
+        await action("admin.moderate", { id: target.id, status: "hidden" });
+        if (leavePost) router.push("/community");
+      },
+      "삭제 처리",
+    );
+  }
   function card(post: Row) {
     const photos = Array.isArray(post.images) ? post.images : [];
     const comments = rows.filter(
-      (r) => r.kind === "comment" && r.postId === post.id,
+      (r) =>
+        r.kind === "comment" && r.postId === post.id && r.status !== "hidden",
     ).length;
     return (
       <article className="post-card" key={post.id}>
@@ -564,6 +584,16 @@ export default function Workspace() {
           <span className="muted">
             {post.sample ? "예시 이야기" : date(post.createdAt)}
           </span>
+          {user?.role === "admin" && (
+            <button
+              type="button"
+              className="text-button danger"
+              disabled={busy}
+              onClick={() => moderateHere(post)}
+            >
+              관리자 삭제
+            </button>
+          )}
         </div>
         <div className={"post-preview" + (photos.length ? " with-photos" : "")}>
           <Link className="post-link" href={"/posts/" + post.id}>
@@ -981,6 +1011,16 @@ export default function Workspace() {
           <div className="body-text">{str(post.body)}</div>
           <p className="muted">희망 일정: {scheduleLabel(post)}</p>
           <div className="actions">
+            {user?.role === "admin" && (
+              <button
+                type="button"
+                className="danger"
+                disabled={busy}
+                onClick={() => moderateHere(post, true)}
+              >
+                관리자 삭제
+              </button>
+            )}
             {isOwner ? (
               <>
                 <button onClick={() => createPost(post)}>수정</button>
@@ -1244,11 +1284,26 @@ export default function Workspace() {
         <section className="panel">
           <h2 id="comments">댓글</h2>
           {rows
-            .filter((r) => r.kind === "comment" && r.postId === post.id)
+            .filter(
+              (r) =>
+                r.kind === "comment" &&
+                r.postId === post.id &&
+                r.status !== "hidden",
+            )
             .map((c) => (
               <div className="comment" key={c.id}>
                 <b>{str(c.authorName)}</b>
                 <p>{str(c.body)}</p>
+                {user?.role === "admin" && (
+                  <button
+                    type="button"
+                    className="text-button danger"
+                    disabled={busy}
+                    onClick={() => moderateHere(c)}
+                  >
+                    관리자 삭제
+                  </button>
+                )}
                 <button
                   className="text-button"
                   onClick={() =>
