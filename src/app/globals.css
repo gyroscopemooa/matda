@@ -2568,3 +2568,28 @@ button.admin-inline-delete:hover {
   padding: 10px;
   white-space: nowrap;
 }
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.comment-safety-menu summary {
+  width: 28px;
+  height: 28px;
+  border: 0;
+}
+.comment-safety-menu .post-safety-options {
+  top: calc(100% + 4px);
+  bottom: auto;
+}
+.comment-safety-menu .post-safety-options button {
+  display: flex;
+  width: 100%;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-height: 36px;
+}
