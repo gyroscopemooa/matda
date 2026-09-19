@@ -1296,32 +1296,63 @@ export default function Workspace() {
                   {adminControl(c)}
                 </div>
                 <p>{str(c.body)}</p>
-
-                <button
-                  className="text-button"
-                  onClick={() =>
-                    c.ownerId === user?.id
-                      ? run(() => action("comment.delete", { id: c.id }))
-                      : openForm(
-                          "댓글 신고",
+                <div className="comment-actions">
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      c.ownerId === user?.id
+                        ? run(() => action("comment.delete", { id: c.id }))
+                        : openForm(
+                            "댓글 신고",
+                            [
+                              {
+                                key: "reason",
+                                label: "신고 사유",
+                                required: true,
+                              },
+                            ],
+                            async (v) => {
+                              await action("report.create", {
+                                ...v,
+                                targetId: c.id,
+                              });
+                            },
+                          )
+                    }
+                  >
+                    {c.ownerId === user?.id ? "삭제" : "신고"}
+                  </button>
+                  {user && c.ownerId !== user.id && (
+                    <button
+                      type="button"
+                      className="text-button"
+                      disabled={busy}
+                      onClick={() =>
+                        openForm(
+                          "댓글 작성자 차단",
                           [
                             {
-                              key: "reason",
-                              label: "신고 사유",
+                              key: "confirm",
+                              label:
+                                "이 작성자의 글과 댓글을 숨기고 대화를 차단합니다. ‘차단’을 입력하세요.",
                               required: true,
                             },
                           ],
                           async (v) => {
-                            await action("report.create", {
-                              ...v,
-                              targetId: c.id,
+                            if (v.confirm !== "차단")
+                              throw new Error("차단을 입력해주세요.");
+                            await action("block.create", {
+                              targetId: c.ownerId,
                             });
                           },
+                          "차단하기",
                         )
-                  }
-                >
-                  {c.ownerId === user?.id ? "삭제" : "신고"}
-                </button>
+                      }
+                    >
+                      차단
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           <form
