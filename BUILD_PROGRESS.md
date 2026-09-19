@@ -11,6 +11,7 @@
 - `/auth/google`은 Supabase PKCE OAuth 시작 주소와 code-verifier 쿠키를 만들고, `/auth/callback`은 인증된 Google 이메일을 현재 로컬 개발 계정과 연결한다.
 - 이 단계는 게시글·댓글·채팅의 Supabase DB 저장 전환이 아니다. 앱의 거래 데이터는 여전히 local adapter이며, 실제 서비스 출시 조건은 충족하지 않았다.
 - 검증: OAuth 시작 E2E 통과, lint/typecheck/build 통과. 실제 Google 계정 선택과 콜백은 사용자 브라우저에서 최종 확인 필요.
+- `localhost`와 `127.0.0.1`의 host-only PKCE 쿠키 충돌을 방지하기 위해 OAuth 시작을 설정된 `NEXT_PUBLIC_SITE_URL` 호스트로 먼저 정규화했다. 로컬 두 주소의 redirect 동작과 127.0.0.1 OAuth URL 생성을 재확인했다.
 
 ## 완료 판정 범위
 별도 첨부 MASTER_PROMPT.md의 mock/feature flag 허용 원칙을 적용했다. 체크 표시는 로컬 구현과 자동화된 대표 흐름 검증을 의미한다. 각 화면의 모든 입력 조합, 모든 브라우저, 실제 외부 서비스까지 전수 검증했다는 뜻은 아니다. 단계별 10가지 상태 검증 근거와 한계는 docs/QA_REPORT.md에 기록했다.

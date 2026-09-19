@@ -4,7 +4,18 @@ import { supabaseAuth } from "@/lib/supabase-auth";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
+  const requestUrl = new URL(request.url);
+  const requestHost =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    requestUrl.host;
+  const requestOrigin = `${requestUrl.protocol}//${requestHost}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || requestOrigin;
+  // PKCE stores its verifier in a host-only cookie. Begin OAuth on the same
+  // configured host that will receive the callback, even if a developer used
+  // localhost to open the preview.
+  if (requestOrigin !== new URL(siteUrl).origin)
+    return NextResponse.redirect(new URL("/auth/google", siteUrl));
   const callback = new URL("/auth/callback", siteUrl).toString();
   const response = NextResponse.redirect(new URL("/", request.url));
   try {

@@ -18,6 +18,7 @@ const child = spawn(
     env: {
       ...process.env,
       NEXT_PUBLIC_RELEASE_PHASE: "8",
+      NEXT_PUBLIC_SITE_URL: "http://127.0.0.1:3108",
       NEXT_DIST_DIR: ".next-e2e",
       LOCAL_DATA_DIR: dataDir,
     },

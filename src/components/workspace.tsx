@@ -210,7 +210,12 @@ export default function Workspace() {
   }, [toast]);
   useEffect(() => {
     const status = new URLSearchParams(window.location.search).get("auth");
-    if (status === "google-failed" || status === "google-unavailable")
+    if (
+      status === "google-failed" ||
+      status === "google-unavailable" ||
+      status === "google-missing-code" ||
+      status === "google-callback-failed"
+    )
       setToast(
         "Google 로그인을 완료하지 못했습니다. 잠시 후 다시 시도해주세요.",
       );

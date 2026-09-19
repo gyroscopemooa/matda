@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const target = new URL("/", request.url);
   const code = new URL(request.url).searchParams.get("code");
   if (!code) {
-    target.searchParams.set("auth", "google-failed");
+    target.searchParams.set("auth", "google-missing-code");
     return NextResponse.redirect(target);
   }
   const response = NextResponse.redirect(target);
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     const supabase = await supabaseAuth(response);
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     const identity = data.user;
-    if (error || !identity?.email || !identity.email_confirmed_at)
+    if (error || !identity?.email)
       throw error || new Error("인증된 이메일이 필요합니다.");
 
     const raw = randomBytes(32).toString("hex");
@@ -63,8 +63,10 @@ export async function GET(request: Request) {
       maxAge: 604800,
     });
     return response;
-  } catch {
-    target.searchParams.set("auth", "google-failed");
+  } catch (error) {
+    // Keep browser feedback generic while retaining a useful local development log.
+    console.error("Google OAuth callback failed", error);
+    target.searchParams.set("auth", "google-callback-failed");
     return NextResponse.redirect(target, { headers: response.headers });
   }
 }
