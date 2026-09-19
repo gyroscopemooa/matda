@@ -173,14 +173,50 @@ svg {
   color: #7c8ba0;
   margin-top: 9px;
 }
-.brand .sun {
-  display: inline-block;
-  color: #ffb33f;
-  font-size: 29px;
-  position: absolute;
-  top: -10px;
-  right: -23px;
-  transform: rotate(10deg);
+.brand.community-brand {
+  display: flex;
+  column-gap: 9px;
+  row-gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 10px;
+  text-decoration: none;
+}
+.brand-candidate { display: flex; width: 156px; height: 66px; align-items: center; justify-content: flex-start; }
+.brand-candidate img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: left center; }
+@media (max-width: 640px) {
+  .brand-candidate { width: 116px; height: 56px; }
+}
+.community-brand .brand-symbol {
+  grid-row: 1 / 3;
+  width: 42px;
+  height: 42px;
+  color: #2474f5;
+  transition: transform 180ms ease;
+}
+.community-brand .brand-wordmark {
+  font-family: "AndongKaturi", sans-serif;
+  font-size: 33px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -1px;
+  color: #142e52;
+}
+.brand.community-brand small {
+  grid-column: 2;
+  font-size: 9px;
+  line-height: 1.3;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  color: #75849a;
+  margin: 0;
+}
+.community-brand:hover .brand-symbol { transform: rotate(-5deg); }
+.community-brand:focus-visible { outline: 3px solid #2474f5; outline-offset: 5px; }
+@media (prefers-reduced-motion: reduce) {
+  .community-brand .brand-symbol { transition: none; }
+  .community-brand:hover .brand-symbol { transform: none; }
 }
 .biz-brand {
   font-size: 23px;
@@ -409,13 +445,7 @@ main {
   right: 8px;
   top: 18px;
   color: #d9e7fb;
-  transform: rotate(-8deg);
-}
-.welcome-art svg:last-child {
-  color: #91b9f4;
-  position: absolute;
-  right: -10px;
-  top: -9px;
+  transform: rotate(-4deg);
 }
 .searchbar {
   display: flex;
@@ -937,6 +967,78 @@ main {
   margin-left: auto;
   font-size: 12px;
 }
+@font-face {
+  font-family: "AndongKaturi";
+  src: url("/fonts/Katuri.woff") format("woff");
+  font-display: swap;
+  font-weight: 400;
+}
+.welcome-katuri .eyebrow,
+.welcome-katuri h1,
+.welcome-katuri p {
+  font-family: "AndongKaturi", sans-serif;
+  font-weight: 400;
+}
+.account h1,
+.profile-avatar-picker legend {
+  font-family: "AndongKaturi", sans-serif;
+  font-weight: 400;
+}
+.profile-photo {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.profile-avatar-picker {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.profile-avatar-picker .big-avatar {
+  display: inline-flex;
+  overflow: hidden;
+}
+.profile-avatar-picker p {
+  font-size: 12px;
+  color: #64748b;
+}
+.profile-avatar-picker .avatar-options button {
+  font-size: 28px;
+}
+.profile-avatar-picker button[aria-pressed="true"] {
+  background: #edf4ff;
+  border-color: #2673ed;
+}
+.avatar-options {
+  display: flex;
+  gap: 12px;
+  border: 0;
+  padding: 0;
+  margin: 16px 0;
+}
+.avatar-options legend {
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+.avatar-options label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #dce5f2;
+  border-radius: 14px;
+  cursor: pointer;
+}
+.avatar-options label:has(input:checked) {
+  background: #edf4ff;
+  border-color: #2673ed;
+}
+.avatar-options span {
+  font-size: 30px;
+}
 .big-avatar {
   height: 62px;
   width: 62px;
@@ -1382,8 +1484,19 @@ dialog .muted {
     font-size: 11px;
     max-width: 280px;
   }
+  .welcome.welcome-katuri {
+    padding-right: 80px;
+    min-height: 100px;
+  }
   .welcome-art {
-    display: none;
+    display: block;
+    right: 0;
+    top: 12px;
+    pointer-events: none;
+  }
+  .welcome-art svg {
+    width: 72px;
+    height: 66px;
   }
   .searchbar {
     min-height: 50px;

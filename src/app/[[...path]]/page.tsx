@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import Workspace from "@/components/workspace";
 import { transact } from "@/lib/store";
 import { siteConfig, isReleasedPath } from "@/lib/config";
+import { remoteEnabled } from "@/lib/community-repository";
+import { createClient } from "@supabase/supabase-js";
 const titles: Record<string, string> = {
   "": "가까운 이웃과 더 나은 일상",
   community: "우리 동네 이야기",
@@ -26,17 +28,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     "가벼운 글쓰기부터 업체와의 연결까지, 같은 공간에서 시작하세요.";
   if (parts.length === 2 && ["posts", "providers"].includes(parts[0])) {
     try {
-      const row = await transact((db) =>
-        db.rows.find(
-          (r) =>
-            r.id === parts[1] &&
-            (r.kind === "provider" ||
-              (r.kind === "post" && r.status === "published")),
-        ),
-      );
+      const row = remoteEnabled()
+        ? (
+            await createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+            )
+              .from("posts")
+              .select("title,body")
+              .eq("id", parts[1])
+              .eq("status", "published")
+              .maybeSingle()
+          ).data
+        : await transact((db) =>
+            db.rows.find(
+              (r) =>
+                r.id === parts[1] &&
+                (r.kind === "provider" ||
+                  (r.kind === "post" && r.status === "published")),
+            ),
+          );
       if (row) {
-        title = String(row.title || row.name);
-        description = String(row.body || row.intro).slice(0, 150);
+        title = String(row.title || ("name" in row ? row.name : ""));
+        description = String(
+          row.body || ("intro" in row ? row.intro : ""),
+        ).slice(0, 150);
       }
     } catch {
       /* Preview configuration errors surface on the page. */

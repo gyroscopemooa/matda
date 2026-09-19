@@ -2,6 +2,21 @@
 
 > 요구사항이 바뀔 때 삭제하지 말고 새 항목을 추가한다.
 
+## 2026-09-20 — Phase 1 출시 준비 7항목
+- Supabase JWT 및 normalized table repository를 local adapter와 분리한다. RLS를 우회하는 service-role key는 사용하지 않는다. Phase 2+ 원격 액션은 거절한다.
+- 사진은 기준문서의 R2를 유지한다. 공개 커뮤니티 이미지 metadata만 Supabase에 저장한다. 기존 로컬 사진/글/이메일 비밀번호를 운영 데이터로 자동 복제하지 않는다.
+- 회원 프로필의 기존 Auth metadata는 최초 기본값에만 쓰며 관리자 권한은 private community_admins 테이블에서만 판단한다.
+- Realtime 수신과 재연결 후 snapshot 갱신, 5초 채팅/30초 일반 화면 폴링을 함께 유지한다. OS push는 범위에 포함하지 않는다.
+- 테스트는 격리 데이터로 수행하고 사용자 수동 테스트는 실제 연결 후 한 번에 진행한다. 운영자 로그인이 없어 DB 업그레이드/SMTP/R2/호스팅/DNS는 준비 문서와 별도 미완료로 기록한다.
+- Next.js는 npm audit 확인에 따라 16.3.5로 보안 패치했다. UI Phase 1과 사용자 승인 브랜드 시안을 유지한다.
+
+## 2026-09-20 — Google OAuth 시작 연결
+- Google OAuth는 Supabase Auth Provider를 사용한다. 프로젝트 공개키와 URL은 Git 제외 `.env.local`에만 저장한다.
+- OAuth 시작/콜백에는 PKCE를 사용하고, nonce 검사 및 이메일 없는 계정은 허용하지 않는다.
+- 콜백 주소는 `NEXT_PUBLIC_SITE_URL`에서 만들어 개발 주소가 Next 개발 서버의 localhost 정규화에 의해 달라지지 않도록 한다.
+- Google 인증 계정은 현 단계에서 로컬 개발 저장소의 사용자와 연결된다. 데이터 저장의 Supabase 전환 전에는 공개 출시로 표시하지 않는다.
+- Next 개발 서버의 URL 정규화와 PKCE host-only 쿠키가 충돌하지 않도록, localhost 요청은 설정된 127.0.0.1 개발 호스트에서 OAuth를 다시 시작한다.
+
 ## 2026-09 — 핵심 제품 결정
 - 커뮤니티 → 민간견적 → 업체찾기 → B2B로 연속 확장한다.
 - 커뮤니티가 활성화되지 않아도 기본 로드맵 개발은 계속한다.

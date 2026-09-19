@@ -3,11 +3,15 @@ import { NextResponse } from "next/server";
 import { transact } from "@/lib/store";
 import { hashToken, passwordHash } from "@/lib/auth";
 import { supabaseAuth } from "@/lib/supabase-auth";
+import { ensureProfile, remoteEnabled } from "@/lib/community-repository";
+import { applyRemoteProfile, persistRemoteProfile } from "@/lib/remote-profile";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const target = new URL("/", process.env.NEXT_PUBLIC_SITE_URL || request.url);
+  if (new URL(request.url).searchParams.get("next") === "/reset-password")
+    target.pathname = "/reset-password";
   const code = new URL(request.url).searchParams.get("code");
   if (!code) {
     target.searchParams.set("auth", "google-missing-code");
@@ -20,9 +24,13 @@ export async function GET(request: Request) {
     const identity = data.user;
     if (error || !identity?.email)
       throw error || new Error("인증된 이메일이 필요합니다.");
+    if (remoteEnabled()) {
+      await ensureProfile(supabase, identity);
+      return response;
+    }
 
     const raw = randomBytes(32).toString("hex");
-    await transact((db) => {
+    await transact(async (db) => {
       const email = identity.email!.toLowerCase();
       let user = db.users.find((candidate) => candidate.email === email);
       if (!user) {
@@ -46,6 +54,13 @@ export async function GET(request: Request) {
         db.users.push(user);
       }
       if (user.disabled) throw new Error("이용이 제한된 계정입니다.");
+      user.supabaseId = identity.id;
+      if (identity.user_metadata.haejyo_profile)
+        applyRemoteProfile(user, identity);
+      else {
+        user.name = user.name.slice(0, 20);
+        await persistRemoteProfile(supabase, user);
+      }
       db.sessions = db.sessions.filter(
         (session) => Date.parse(session.expiresAt) > Date.now(),
       );

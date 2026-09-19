@@ -17,6 +17,7 @@ const child = spawn(
     stdio: "inherit",
     env: {
       ...process.env,
+      DATA_ADAPTER: "local",
       NEXT_PUBLIC_RELEASE_PHASE: "8",
       NEXT_PUBLIC_SITE_URL: "http://127.0.0.1:3108",
       NEXT_DIST_DIR: ".next-e2e",

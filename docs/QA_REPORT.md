@@ -1,5 +1,16 @@
 # QA REPORT — 2026-09-20
 
+## 최신 Phase 1 원격 연결 코드 검증
+
+- 단위/DB 27개 통과: 기존 도메인 + remote mapper의 기간 종료일/optional category/500개 이상 프로필 처리/권한 필드 주입 방지, Phase 1 환경 제한.
+- PGlite 0001~0005 실행: 프로필 권한·사진 소유권·채팅 중복 생성/참여자·차단·알림 생성/읽음·관리자 조치·숨김·계정 제한 검증.
+- Edge E2E 17개 실행에서 16개 통과. 가입 라벨 이름→닉네임에 맞춰 테스트 수정 후 해당 파일 2개 재실행 모두 통과. 프로필 업로드 테스트의 잘못된 PNG fixture는 브라우저 생성 PNG로 교체 후 통과.
+- 린트/타입검사 통과, Next 16.3.5 production build 성공. npm install audit 0 vulnerabilities.
+- 새 프로필 사진 업로드/새로고침 지속성 테스트는 local adapter를 검증했다. 이메일 복구 UI 테스트는 intercepted response를 사용했으며 실제 메일 발송 검증이 아니다.
+- 원격 읽기전용 preflight는 새 컬럼 미적용(42703), R2 변수 누락을 확인했다. 실제 원격 E2E·SMTP·R2·Realtime·공개 배포는 미검증이다.
+
+아래는 최초 로컬 전체 Phase 검증 이력이다.
+
 ## 실행 결과
 
 |검증|결과|범위|

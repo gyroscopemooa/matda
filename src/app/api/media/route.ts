@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { remoteEnabled } from "@/lib/community-repository";
+import { remoteMedia } from "@/lib/community-api";
 import { randomUUID, createHmac, timingSafeEqual } from "node:crypto";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -33,6 +35,7 @@ const sign = (id: string, userId: string, expiry: string) =>
     .update(`${id}:${userId}:${expiry}`)
     .digest("hex");
 export async function POST(request: Request) {
+  if (remoteEnabled()) return remoteMedia(request);
   try {
     checkOrigin(request);
     const token = await sessionToken();
@@ -134,6 +137,7 @@ export async function POST(request: Request) {
   }
 }
 export async function GET(request: Request) {
+  if (remoteEnabled()) return remoteMedia(request);
   try {
     const url = new URL(request.url);
     const id = url.searchParams.get("id");

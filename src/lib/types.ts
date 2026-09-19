@@ -5,6 +5,8 @@ export type User = {
   password: string;
   role: "customer" | "provider" | "admin";
   region: string;
+  avatar?: string;
+  supabaseId?: string;
   createdAt: string;
   disabled?: boolean;
 };
@@ -29,6 +31,7 @@ export const publicUser = (user: User): PublicUser => {
     email: user.email,
     role: user.role,
     region: user.region,
+    avatar: user.avatar || "sun",
     createdAt: user.createdAt,
     disabled: user.disabled,
   };

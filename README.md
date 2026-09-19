@@ -1,9 +1,9 @@
 # 해죠 / MATDA BIZ
 
 첨부 기준문서의 커뮤니티 → 견적 → 업체 → BIZ → RFQ/계약 → 민간입찰 흐름을 구현한 **로컬 MVP**입니다.
-현재 데이터·인증·파일은 로컬 개발 어댑터로 작동합니다. Supabase/R2/Turnstile/실제 PG는 연결하지 않았으며 공개 서비스로 배포한 상태가 아닙니다.
+기본 미리보기는 로컬 개발 어댑터로 작동합니다. Phase 1용 Supabase Auth/DB/Realtime 및 R2 사진 어댑터를 추가했으며, 실제 DB 업그레이드·R2·호스팅 연결과 운영 검증은 남아 있습니다. 공개 서비스로 배포한 상태는 아닙니다.
 
-Google 로그인은 Supabase Auth OAuth를 사용해 연결할 수 있습니다. 인증된 Google 계정은 현재 로컬 개발 계정과 연결되며, 글·댓글·채팅 데이터 자체를 Supabase로 옮기는 작업은 아직 남아 있습니다.
+`DATA_ADAPTER=supabase`에서 Google·이메일 로그인과 public.profiles, 글·댓글·사진 metadata·채팅·알림·신고를 사용합니다. 기본 local 모드의 Google 로그인은 기존처럼 로컬 개발 계정과 연결합니다. [최신 공개 연결 안내](docs/COMMUNITY_LAUNCH.md)에 실행할 SQL, 환경변수, 이메일 템플릿과 마지막 테스트 순서를 정리했습니다. 아래 로컬 전용/원격 미구현 설명은 최초 구현 이력이며 Phase 1은 최신 안내를 우선합니다.
 
 ## 바로 실행
 

@@ -17,7 +17,7 @@ test("Environment fail-closed, payments disabled and explicit local preview exce
   assert.equal(validateEnvironment({}).adapter, "local");
   assert.throws(
     () => validateEnvironment({ DATA_ADAPTER: "supabase" }),
-    /연결/,
+    /DATA_ADAPTER=local/,
   );
   assert.throws(
     () => validateEnvironment({ PAYMENTS_ENABLED: "true" }),

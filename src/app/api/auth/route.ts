@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { remoteEnabled } from "@/lib/community-repository";
+import { remoteAuth } from "@/lib/community-api";
 import { randomBytes, randomUUID } from "node:crypto";
 import { transact } from "@/lib/store";
 import {
@@ -13,6 +15,7 @@ import {
 import { AppError, publicUser, required } from "@/lib/types";
 export const runtime = "nodejs";
 export async function GET() {
+  if (remoteEnabled()) return remoteAuth();
   const token = await sessionToken();
   return NextResponse.json(
     await transact((db) => ({
@@ -22,6 +25,7 @@ export async function GET() {
   );
 }
 export async function POST(request: Request) {
+  if (remoteEnabled()) return remoteAuth(request);
   try {
     checkOrigin(request);
     const data = await request.json();

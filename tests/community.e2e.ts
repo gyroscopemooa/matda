@@ -44,7 +44,7 @@ test("Phase 1: signup, minimal post, comment, edit, MY and persistent refresh", 
   await page.goto("/");
   await page.getByRole("button", { name: "로그인", exact: true }).click();
   await page.getByRole("button", { name: "처음이신가요? 회원가입" }).click();
-  await page.getByLabel("이름", { exact: false }).fill("테스트 이웃");
+  await page.getByLabel("닉네임", { exact: false }).fill("테스트 이웃");
   await page.getByLabel("이메일").fill(`neighbor-${Date.now()}@example.test`);
   await page.getByLabel("비밀번호").fill("local-test-password");
   await page.getByRole("button", { name: "가입하기", exact: true }).click();

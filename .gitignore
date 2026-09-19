@@ -8,6 +8,8 @@ playwright-report/
 *.tsbuildinfo
 
 .next-e2e/
+.next-build/
+.vercel/
 
 docs/*.png
 *.log

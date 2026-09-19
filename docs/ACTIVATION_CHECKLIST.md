@@ -1,6 +1,6 @@
 # 외부 연결 및 공개 활성화 체크리스트
 
-현재: 로컬 어댑터만 실행 가능. 원격 키를 입력하는 것만으로 서비스가 연결되는 구현은 아닙니다. 다음 항목은 **남은 개발/운영 작업**이며 완료로 표시하지 않습니다.
+최신 Phase 1 작업은 [COMMUNITY_LAUNCH.md](COMMUNITY_LAUNCH.md)를 따른다. Supabase/R2/Realtime 어댑터 코드는 추가됐지만 DB migration·R2 자격증명·호스팅/DNS 연결은 미완료다. 아래는 최초 계획 이력과 후속 Phase의 남은 범위로, 최신 Phase 1 안내와 충돌할 경우 최신 안내를 우선한다.
 
 ## Supabase
 

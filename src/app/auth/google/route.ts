@@ -22,7 +22,10 @@ export async function GET(request: Request) {
     const supabase = await supabaseAuth(response);
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: callback },
+      options: {
+        redirectTo: callback,
+        queryParams: { prompt: "select_account" },
+      },
     });
     if (error || !data.url)
       throw error || new Error("Google 로그인 주소를 만들지 못했습니다.");

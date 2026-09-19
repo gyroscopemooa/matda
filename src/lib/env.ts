@@ -5,7 +5,7 @@ export function validateEnvironment(
   const adapter = env.DATA_ADAPTER || "local";
   if (adapter !== "local")
     throw new AppError(
-      "원격 어댑터는 아직 연결되지 않았습니다. DATA_ADAPTER=local로 로컬 검증을 진행하세요.",
+      "로컬 저장소는 DATA_ADAPTER=local에서만 사용할 수 있습니다.",
       503,
     );
   if (env.PAYMENTS_ENABLED === "true")
@@ -16,4 +16,28 @@ export function validateEnvironment(
   if (env.NODE_ENV === "production" && env.ALLOW_LOCAL_PREVIEW !== "true")
     throw new AppError("로컬 어댑터의 실서비스 실행은 차단되어 있습니다.", 503);
   return { adapter, payments: false, remoteConnected: false };
+}
+
+export function validateCommunityEnvironment(
+  env: Record<string, string | undefined> = process.env,
+) {
+  if (
+    env.DATA_ADAPTER !== "supabase" ||
+    Number(env.NEXT_PUBLIC_RELEASE_PHASE || "1") !== 1 ||
+    env.PAYMENTS_ENABLED === "true" ||
+    env.TENDERS_ENABLED === "true"
+  )
+    throw new AppError(
+      "현재 원격 연결은 커뮤니티 Phase 1 설정에서만 지원합니다.",
+      503,
+    );
+  if (
+    !env.NEXT_PUBLIC_SUPABASE_URL ||
+    !env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    !env.NEXT_PUBLIC_SITE_URL
+  )
+    throw new AppError("서비스 연결 설정을 확인해주세요.", 503);
+  const site = new URL(env.NEXT_PUBLIC_SITE_URL);
+  if (env.NODE_ENV === "production" && site.protocol !== "https:")
+    throw new AppError("공개 서비스에는 HTTPS 주소가 필요합니다.", 503);
 }

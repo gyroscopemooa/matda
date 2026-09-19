@@ -7,6 +7,8 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
+import ProfileAvatar, { Avatar } from "./profile-avatar";
+import RotatingBrand from "./rotating-brand";
 import PostKindPicker from "./post-kind-picker";
 import { popularPosts } from "@/lib/popular";
 import RegionPicker from "./region-picker";
@@ -34,7 +36,7 @@ import {
   PaintRoller,
   Wrench,
   Car,
-  Sparkles,
+  Brush,
   Ellipsis,
   Heart,
   ImagePlus,
@@ -56,6 +58,7 @@ import {
   postTypes,
 } from "@/lib/config";
 import type { Row, PublicUser } from "@/lib/types";
+import { communityBrowser } from "@/lib/community-browser";
 type Snapshot = {
   user: PublicUser | null;
   rows: Row[];
@@ -80,7 +83,7 @@ type Field = {
   required?: boolean;
   value?: string;
 };
-const icons = [Sparkles, Truck, Wrench, PaintRoller, Car, Ellipsis];
+const icons = [Brush, Truck, Wrench, PaintRoller, Car, Ellipsis];
 const bizIcons = [HardHat, Zap, Flame, Building2, Leaf, ClipboardCheck];
 const str = (v: unknown) => String(v ?? "");
 const currency = (v: unknown) => Number(v || 0).toLocaleString("ko-KR") + "원";
@@ -88,6 +91,7 @@ const date = (v: unknown) => new Date(str(v)).toLocaleDateString("ko-KR");
 const typeLabel = (v: unknown) =>
   postTypes[v as keyof typeof postTypes] || str(v);
 function FieldInput({ field }: { field: Field }) {
+  if (field.key === "avatar") return <ProfileAvatar value={field.value} />;
   if (field.key === "type")
     return (
       <PostKindPicker
@@ -153,6 +157,19 @@ export default function Workspace() {
     mode: "local",
   });
   const [loading, setLoading] = useState(true);
+  const [welcomeMeme, setWelcomeMeme] = useState(false);
+  const welcomeInitialized = useRef(false);
+  useEffect(() => {
+    if (welcomeInitialized.current) return;
+    welcomeInitialized.current = true;
+    try {
+      const next = sessionStorage.getItem("haejyo-welcome-art") !== "meme";
+      sessionStorage.setItem("haejyo-welcome-art", next ? "meme" : "house");
+      setWelcomeMeme(next);
+    } catch {
+      setWelcomeMeme(true);
+    }
+  }, []);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
@@ -166,6 +183,7 @@ export default function Workspace() {
     submit: (values: Record<string, string>) => Promise<void>;
     extra?: ReactNode;
     button?: string;
+    successMessage?: string;
   }>(null);
   const [compared, setCompared] = useState<string[]>([]);
   const [signup, setSignup] = useState(false);
@@ -210,6 +228,10 @@ export default function Workspace() {
   }, [toast]);
   useEffect(() => {
     const status = new URLSearchParams(window.location.search).get("auth");
+    if (status === "confirmation-failed")
+      setToast(
+        "인증 링크가 만료됐거나 이미 사용됐어요. 인증 메일을 다시 요청해주세요.",
+      );
     if (
       status === "google-failed" ||
       status === "google-unavailable" ||
@@ -225,10 +247,51 @@ export default function Workspace() {
     else dialogRef.current?.close();
   }, [modal, authOpen]);
   useEffect(() => {
-    if (!path.startsWith("/chat")) return;
-    const timer = setInterval(refresh, 5000);
-    return () => clearInterval(timer);
-  }, [path, refresh]);
+    if (!path.startsWith("/chat") && !(data.mode === "supabase" && user?.id))
+      return;
+    const update = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    const timer = setInterval(update, path.startsWith("/chat") ? 5000 : 30000);
+    window.addEventListener("focus", update);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", update);
+    };
+  }, [path, refresh, data.mode, user?.id]);
+  useEffect(() => {
+    if (data.mode !== "supabase" || !user?.id) return;
+    const client = communityBrowser();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const update = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => void refresh(), 200);
+    };
+    const channel = client
+      .channel("community-inbox:" + user.id)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        update,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        update,
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") update();
+      });
+    return () => {
+      clearTimeout(timer);
+      void client.removeChannel(channel);
+    };
+  }, [data.mode, user?.id, refresh]);
   async function action(name: string, input: Record<string, unknown> = {}) {
     if (!user) {
       setAuthOpen(true);
@@ -261,12 +324,13 @@ export default function Workspace() {
     submit: (v: Record<string, string>) => Promise<void>,
     button = "저장하기",
     requiresLogin = true,
+    successMessage = "저장했어요.",
   ) {
     if (requiresLogin && !user) {
       setAuthOpen(true);
       return;
     }
-    setModal({ title, fields, submit, button });
+    setModal({ title, fields, submit, button, successMessage });
   }
   function createPost(existing?: Row, targetProviderId?: string) {
     if (!user) {
@@ -478,7 +542,9 @@ export default function Workspace() {
           </div>
         )}
         <div className="post-bottom">
-          <span className="avatar">{str(post.authorName).slice(0, 1)}</span>
+          <span className="avatar">
+            <Avatar value={str(post.authorAvatar) || "sun"} />
+          </span>
           <span>{str(post.authorName)}</span>
           <span className="location">
             <MapPin size={13} />
@@ -607,7 +673,7 @@ export default function Workspace() {
       !biz && path !== "/quotes" ? popularPosts(rows, region) : [];
     return (
       <>
-        <section className="welcome">
+        <section className={`welcome${biz ? "" : " welcome-katuri"}`}>
           <div className="eyebrow">
             {biz ? "WORK, BETTER TOGETHER" : "HELLO, NEIGHBOR"}
           </div>
@@ -619,9 +685,76 @@ export default function Workspace() {
               ? "우리 회사에 맞는 전문업체를 만나보세요."
               : "작은 질문부터 필요한 도움까지, 편하게 이야기해요."}
           </p>
-          <span className="welcome-art">
-            <MessageCircle size={60} />
-            <Sparkles size={27} />
+          <span className="welcome-art" aria-hidden="true">
+            {welcomeMeme && !biz ? (
+              <svg
+                width="88"
+                height="80"
+                viewBox="0 0 88 80"
+                fill="none"
+                data-welcome-art="meme"
+              >
+                <ellipse cx="44" cy="71" rx="28" ry="5" fill="#DFEAFB" />
+                <path
+                  d="M19 47C19 29 29 22 44 22s25 7 25 25v13c0 10-50 10-50 0V47Z"
+                  fill="#D4E5FF"
+                  stroke="#8BB2EE"
+                  strokeWidth="2"
+                />
+                <ellipse cx="34" cy="44" rx="6" ry="8" fill="#254D86" />
+                <ellipse cx="54" cy="44" rx="6" ry="8" fill="#254D86" />
+                <circle cx="32" cy="41" r="2.5" fill="white" />
+                <circle cx="52" cy="41" r="2.5" fill="white" />
+                <ellipse cx="26" cy="53" rx="5" ry="3" fill="#FFBAC3" />
+                <ellipse cx="62" cy="53" rx="5" ry="3" fill="#FFBAC3" />
+                <path
+                  d="M41 53q3 4 6 0"
+                  stroke="#254D86"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="m29 63 10-3q5 1 2 5l-10 3m28-5-10-3q-5 1-2 5l10 3"
+                  fill="#EAF3FF"
+                  stroke="#8BB2EE"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <text
+                  x="44"
+                  y="17"
+                  textAnchor="middle"
+                  fill="#487AC4"
+                  fontSize="17"
+                  fontFamily="AndongKaturi, sans-serif"
+                >
+                  해죠…
+                </text>
+              </svg>
+            ) : (
+              <svg
+                width="88"
+                height="80"
+                viewBox="0 0 88 80"
+                fill="none"
+                data-welcome-art="house"
+              >
+                <circle cx="44" cy="40" r="35" fill="#EAF2FF" />
+                <path
+                  d="M15 38 43 15l29 23"
+                  stroke="#86AEEC"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path d="M23 35v29h41V35L43 21 23 35Z" fill="#C9DDFB" />
+                <path
+                  d="M44 55s-13-7-13-14a7 7 0 0 1 13-3 7 7 0 0 1 13 3c0 7-13 14-13 14Z"
+                  fill="#568CE0"
+                />
+                <circle cx="72" cy="17" r="5" fill="#FFD990" />
+              </svg>
+            )}
           </span>
         </section>
         {popular.length > 0 && (
@@ -1223,7 +1356,9 @@ export default function Workspace() {
     return (
       <>
         <section className="panel account">
-          <span className="big-avatar">{user.name[0]}</span>
+          <span className="big-avatar">
+            <Avatar value={user.avatar} />
+          </span>
           <div>
             <h1>{user.name}님</h1>
             <p>
@@ -1234,32 +1369,46 @@ export default function Workspace() {
               className="text-button"
               onClick={() =>
                 openForm(
-                  "내 기본 지역",
+                  "프로필 수정",
                   [
+                    {
+                      key: "name",
+                      label: "닉네임 (최대 20자)",
+                      required: true,
+                      value: user.name,
+                    },
+                    {
+                      key: "avatar",
+                      label: "기본 아바타",
+                      value: user.avatar || "sun",
+                    },
                     {
                       key: "region",
                       label: "지역",
-                      required: true,
                       value: user.region,
                     },
                   ],
                   async (v) => {
-                    await action("profile.region", v);
+                    await action("profile.update", v);
                   },
                 )
               }
             >
-              기본 지역 설정
+              프로필 수정
             </button>
           </div>
           <button
             onClick={() =>
               run(async () => {
-                await fetch("/api/auth", {
+                const response = await fetch("/api/auth", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ action: "logout" }),
                 });
+                if (!response.ok)
+                  throw new Error(
+                    (await response.json()).error || "로그아웃하지 못했어요.",
+                  );
                 await refresh();
               }, "로그아웃했어요.")
             }
@@ -1584,6 +1733,11 @@ export default function Workspace() {
                   .filter(
                     (r) =>
                       r.kind === "message" && r.conversationId === selected.id,
+                  )
+                  .sort(
+                    (a, b) =>
+                      Date.parse(a.createdAt) - Date.parse(b.createdAt) ||
+                      a.id.localeCompare(b.id),
                   )
                   .map((m) => (
                     <div
@@ -2374,7 +2528,8 @@ export default function Workspace() {
         <div className="header-inner">
           <Link
             href={biz ? "/biz" : "/"}
-            className={"brand " + (biz ? "biz-brand" : "")}
+            className={"brand " + (biz ? "biz-brand" : "community-brand")}
+            aria-label={biz ? "MATDA BIZ 홈" : "해죠 홈"}
           >
             {biz ? (
               <>
@@ -2382,14 +2537,9 @@ export default function Workspace() {
                 <em>BIZ</em>
               </>
             ) : (
-              <>
-                {siteConfig.name}
-                <span className="sun">✳</span>
-              </>
+              <RotatingBrand />
             )}
-            <small>
-              {biz ? "기업의 더 나은 연결" : "좋은 이웃, 좋은 연결"}
-            </small>
+            {biz && <small>기업의 더 나은 연결</small>}
           </Link>
           <nav className="desktop-nav" aria-label="주 메뉴">
             {nav.map((n) => (
@@ -2456,10 +2606,12 @@ export default function Workspace() {
         <Plus size={18} />
         글쓰기
       </button>
-      <div className="preview-strip">
-        로컬 미리보기 <span>·</span> 예시 글과 직접 등록한 데이터로 이용 흐름을
-        확인할 수 있어요.
-      </div>
+      {data.mode !== "supabase" && (
+        <div className="preview-strip">
+          로컬 미리보기 <span>·</span> 예시 글과 직접 등록한 데이터로 이용
+          흐름을 확인할 수 있어요.
+        </div>
+      )}
       <div className={"layout " + (!isFeed ? "wide-content" : "")}>
         <aside className="sidebar">
           <div className="sidebar-label">
@@ -2720,7 +2872,7 @@ export default function Workspace() {
                 if (!response.ok) throw new Error(result.error);
                 setAuthOpen(false);
                 await refresh();
-                setToast("환영합니다!");
+                setToast(result.message || "환영합니다!");
               } catch (e) {
                 setToast((e as Error).message);
               } finally {
@@ -2731,7 +2883,11 @@ export default function Workspace() {
             <p className="muted">가까운 이웃과 좋은 연결을 시작하세요.</p>
             {signup && (
               <FieldInput
-                field={{ key: "name", label: "이름", required: true }}
+                field={{
+                  key: "name",
+                  label: "닉네임 (최대 20자)",
+                  required: true,
+                }}
               />
             )}
             <FieldInput
@@ -2777,9 +2933,48 @@ export default function Workspace() {
                 ? "이미 계정이 있어요 · 로그인"
                 : "처음이신가요? 회원가입"}
             </button>
+            {data.mode === "supabase" && (
+              <button
+                type="button"
+                className="text-button full"
+                onClick={() => {
+                  setAuthOpen(false);
+                  openForm(
+                    "비밀번호 재설정",
+                    [
+                      {
+                        key: "email",
+                        label: "가입한 이메일",
+                        type: "email",
+                        required: true,
+                      },
+                    ],
+                    async (values) => {
+                      const response = await fetch("/api/auth", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          action: "reset",
+                          email: values.email,
+                        }),
+                      });
+                      const result = await response.json();
+                      if (!response.ok) throw new Error(result.error);
+                      setToast(result.message);
+                    },
+                    "메일 보내기",
+                    false,
+                    "가입된 이메일이라면 재설정 메일이 발송됩니다.",
+                  );
+                }}
+              >
+                비밀번호를 잊으셨나요?
+              </button>
+            )}
             <p className="muted small">
-              Google 로그인은 Supabase Auth로 인증합니다. 게시글 데이터 연결은
-              준비 중입니다.
+              {data.mode === "supabase"
+                ? "이메일 가입 시 인증 메일을 확인해주세요."
+                : "미리보기 이메일 계정은 현재 기기에만 저장됩니다."}
             </p>
           </form>
         ) : (
@@ -2794,7 +2989,7 @@ export default function Workspace() {
                 run(async () => {
                   await modal.submit(values);
                   setModal(null);
-                }, "저장했어요.");
+                }, modal.successMessage || "저장했어요.");
               }}
             >
               {modal.title === "우리 업체의 견적 보내기" &&

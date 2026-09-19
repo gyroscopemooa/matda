@@ -10,6 +10,7 @@ test("Google login starts PKCE OAuth without exposing Supabase keys", async ({
     "https://affpkizmmfnmvyexugdu.supabase.co/auth/v1/authorize",
   );
   expect(location).toContain("provider=google");
+  expect(new URL(location).searchParams.get("prompt")).toBe("select_account");
   expect(location).toContain("code_challenge=");
   expect(response.headers()["set-cookie"] || "").toContain("code-verifier");
 });

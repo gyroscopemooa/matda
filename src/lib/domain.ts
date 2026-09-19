@@ -341,6 +341,7 @@ export function act(
         images,
         status: existing?.status || "published",
         authorName: user.name,
+        authorAvatar: user.avatar || "sun",
         ...parseSchedule(input),
         budget: input.budget ? money(input.budget) : null,
         ...(quoteEnabled && !existing?.expiresAt
@@ -696,6 +697,46 @@ export function act(
     }
     case "profile.enableProvider": {
       if (user.role !== "admin") user.role = "provider";
+      return { ok: true };
+    }
+    case "profile.update": {
+      const name = required(input.name, "닉네임", 20);
+      const avatar = required(input.avatar, "아바타", 80);
+      const photo = avatar.startsWith("media:")
+        ? db.rows.find(
+            (r) =>
+              r.id === avatar.slice(6) &&
+              r.kind === "media" &&
+              r.ownerId === user.id &&
+              r.visibility === "public" &&
+              ["image/jpeg", "image/png", "image/webp"].includes(
+                String(r.mime),
+              ),
+          )
+        : undefined;
+      if (!["sun", "leaf", "smile"].includes(avatar) && !photo)
+        throw new AppError("아바타를 다시 선택해주세요.");
+      const region = input.region
+        ? normalizeRegion(required(input.region, "지역", 80))
+        : "";
+      if (region && !validRegion(region, true))
+        throw new AppError("지역을 올바르게 선택해주세요.");
+      user.name = name;
+      user.avatar = avatar;
+      user.region = region;
+      for (const row of db.rows) {
+        if (row.ownerId === user.id && "authorName" in row) {
+          row.authorName = name;
+          row.authorAvatar = avatar;
+        }
+        if (
+          row.kind === "conversation" &&
+          row.names &&
+          typeof row.names === "object" &&
+          user.id in row.names
+        )
+          (row.names as Record<string, string>)[user.id] = name;
+      }
       return { ok: true };
     }
     case "profile.region": {
