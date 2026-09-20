@@ -212,13 +212,14 @@ export function snapshot(db: Database, user?: User) {
           return {
             ...r,
             quoteCount,
-            quoteState: r.selectedQuoteId
-              ? "selected"
-              : Date.parse(String(r.expiresAt)) <= Date.now()
-                ? "expired"
-                : quoteCount >= Number(r.quoteLimit)
-                  ? "filled"
-                  : "open",
+            quoteState:
+              r.selectedQuoteId || r.remoteQuoteState === "selected"
+                ? "selected"
+                : Date.parse(String(r.expiresAt)) <= Date.now()
+                  ? "expired"
+                  : quoteCount >= Number(r.quoteLimit)
+                    ? "filled"
+                    : "open",
           };
         }
         if (r.kind === "provider") {
@@ -229,7 +230,15 @@ export function snapshot(db: Database, user?: User) {
               p.kind === "post" &&
               p.ownerId === user?.id &&
               p.selectedProviderId === r.ownerId &&
-              (!policy.requireAcceptance || p.providerAccepted),
+              (!policy.requireAcceptance ||
+                p.providerAccepted ||
+                p.contactUnlocked === true) &&
+              !db.rows.some(
+                (b) =>
+                  b.kind === "block" &&
+                  ((b.ownerId === user?.id && b.targetId === r.ownerId) ||
+                    (b.ownerId === r.ownerId && b.targetId === user?.id)),
+              ),
           );
           return selected || r.ownerId === user?.id ? r : safe;
         }
@@ -246,6 +255,7 @@ export function act(
   input: Record<string, unknown>,
   now = Date.now(),
 ): Row | { ok: boolean } {
+  if (user.disabled) throw new AppError("이용이 제한된 계정입니다.", 403);
   if (
     (action.startsWith("tender.") || action.startsWith("bid.")) &&
     process.env.NODE_ENV === "production" &&
@@ -257,15 +267,14 @@ export function act(
     (action.startsWith("quote.") ||
       action.startsWith("trade.") ||
       action.startsWith("selection.") ||
+      action === "review.create" ||
+      action === "profile.enableProvider" ||
+      action === "provider.save" ||
+      action.startsWith("template.") ||
       input.quoteEnabled)
   )
     throw new AppError("견적 기능이 비활성화되어 있습니다.", 403);
-  if (
-    !flags.providers &&
-    (action.startsWith("provider.") ||
-      action.startsWith("verification.") ||
-      action.startsWith("template."))
-  )
+  if (!flags.providers && action.startsWith("verification."))
     throw new AppError("업체 기능이 비활성화되어 있습니다.", 403);
   if (
     !flags.biz &&
@@ -639,6 +648,54 @@ export function act(
         }
       return { ok: true };
     }
+    case "quote.chat": {
+      const quote = get("quote");
+      const post = find(db, quote.postId, "post");
+      if (
+        ![post.ownerId, quote.ownerId].includes(user.id) ||
+        post.status !== "published"
+      )
+        throw new AppError("견적 참여자만 대화할 수 있습니다.", 403);
+      const other = user.id === post.ownerId ? quote.ownerId : post.ownerId;
+      if (
+        db.users.find((u) => u.id === other)?.disabled ||
+        db.rows.some(
+          (r) =>
+            r.kind === "block" &&
+            ((r.ownerId === user.id && r.targetId === other) ||
+              (r.ownerId === other && r.targetId === user.id)),
+        )
+      )
+        throw new AppError("대화할 수 없는 사용자입니다.", 403);
+      let conversation = db.rows.find(
+        (r) =>
+          r.kind === "conversation" &&
+          r.targetId === post.id &&
+          (r.participants as string[]).includes(post.ownerId) &&
+          (r.participants as string[]).includes(quote.ownerId),
+      );
+      if (conversation?.closedAt) throw new AppError("종료된 대화입니다.");
+      if (!conversation)
+        conversation = add(
+          db,
+          user,
+          "conversation",
+          {
+            targetId: post.id,
+            title: post.title,
+            participants: [post.ownerId, quote.ownerId],
+            names: Object.fromEntries(
+              db.users
+                .filter((u) => [post.ownerId, quote.ownerId].includes(u.id))
+                .map((u) => [u.id, u.name]),
+            ),
+          },
+          now,
+        );
+      if (conversation.leftAtBy)
+        delete (conversation.leftAtBy as Record<string, string>)[user.id];
+      return conversation;
+    }
     case "quote.enable": {
       const post = get("post");
       owned(post, user);
@@ -682,6 +739,17 @@ export function act(
       if (post.ownerId === user.id)
         throw new AppError("본인 요청에 견적을 낼 수 없습니다.");
       if (!active(post, now)) throw new AppError("견적 모집이 마감되었습니다.");
+      if (
+        post.sample ||
+        db.users.find((u) => u.id === post.ownerId)?.disabled ||
+        db.rows.some(
+          (r) =>
+            r.kind === "block" &&
+            ((r.ownerId === user.id && r.targetId === post.ownerId) ||
+              (r.ownerId === post.ownerId && r.targetId === user.id)),
+        )
+      )
+        throw new AppError("견적을 보낼 수 없는 요청입니다.", 403);
       const old = db.rows.find(
         (r) =>
           r.kind === "quote" && r.postId === post.id && r.ownerId === user.id,
@@ -699,7 +767,9 @@ export function act(
         scope: String(input.scope || ""),
         duration: String(input.duration || ""),
         extraCost: String(input.extraCost || ""),
-        providerName: user.name,
+        providerName:
+          db.rows.find((r) => r.kind === "provider" && r.ownerId === user.id)
+            ?.name || user.name,
         currency: "KRW",
       };
       const row = old ? update(old, data) : add(db, user, "quote", data, now);
@@ -744,6 +814,18 @@ export function act(
       const quote = get("quote");
       const post = find(db, quote.postId, "post");
       owned(post, user);
+      if (
+        db.users.find((u) => u.id === quote.ownerId)?.disabled ||
+        db.rows.some(
+          (r) =>
+            r.kind === "block" &&
+            ((r.ownerId === user.id && r.targetId === quote.ownerId) ||
+              (r.ownerId === quote.ownerId && r.targetId === user.id)),
+        )
+      )
+        throw new AppError("선택할 수 없는 업체입니다.", 403);
+      if (post.selectedQuoteId === quote.id && post.status === "published")
+        return post;
       if (post.selectedQuoteId || post.status !== "published")
         throw new AppError("이미 선택했거나 종료된 요청입니다.");
       update(post, {
@@ -770,7 +852,7 @@ export function act(
       else if (post.selectedProviderId === user.id)
         update(post, {
           providerConfirmed: !!input.confirmed,
-          providerAccepted: true,
+          ...(input.confirmed ? { providerAccepted: true } : {}),
         });
       else throw new AppError("거래 참여자만 확인할 수 있습니다.", 403);
       if (post.customerConfirmed && post.providerConfirmed)
@@ -801,6 +883,7 @@ export function act(
           rating,
           body: required(input.body, "후기"),
           authorName: user.name,
+          transactionLinked: true,
         },
         now,
       );
@@ -813,9 +896,11 @@ export function act(
         "template",
         {
           name: required(input.name, "템플릿 이름", 80),
-          message: required(input.message, "설명"),
+          message: required(input.message, "설명", 1000),
           scope: String(input.scope || ""),
           amount: money(input.amount),
+          duration: String(input.duration || ""),
+          extraCost: String(input.extraCost || ""),
         },
         now,
       );

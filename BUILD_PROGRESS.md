@@ -2,6 +2,12 @@
 
 최종 갱신: 2026-09-20 (Asia/Seoul)
 
+## 최신 — Phase 2 개발·로컬 검증 완료
+- 이전17% 이후 업체 역할/프로필/견적/템플릿/비교/선택/채팅/연락처/거래확인/후기/비공개 견적서를 연결했다. 개발·로컬 검증6/6 완료, 운영 공개는 별도 미실행이다.
+- SQL0016/0017 준비, 기존 Phase 1 기본값/운영 Worker 설정 유지. 원격 Phase 2는 별도 서버·DB 활성화가 필요하다.
+- 단위·DB·어댑터44개, Phase 2 PC/모바일 E2E4개, 타입/lint/Next build 검증. 실제 클라우드 SQL·스토리지·OAuth·다중연결 부하는 staging에서 확인한다.
+- 상세: docs/PHASE2_PROGRESS.md, 일괄 적용 절차: docs/PHASE2_STAGING.md. 로컬 커밋만 하며 push·배포는 하지 않는다.
+
 ## 최신 — 로컬 기능 개방·운영 공개 분리
 - dev/preview는 로컬 데이터로 개발 Phase 8을 실행하여 견적·업체·기업·RFQ·입찰 테스트를 허용한다. 운영 Phase 1은 유지, 공개 재현용 preview:release 추가.
 - matda.net 견적 준비 중, 후속 하위 경로 404, Supabase API 200 확인. 닫기 위한 재배포 불필요. push 전 공개 상태/승인 확인 규칙을 AGENTS.md에 저장.

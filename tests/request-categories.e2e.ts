@@ -15,7 +15,7 @@ test("Digital requests work without region and remain discoverable across local 
     page.getByRole("link", { name: "디지털요청자 마이페이지", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "필요한 일이 있나요? 일단 올려죠." }),
+    page.getByRole("heading", { name: "내 요청에 맞는 견적을 비교해보세요" }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "글쓰기", exact: true })

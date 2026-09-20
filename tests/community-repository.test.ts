@@ -109,7 +109,7 @@ test("Remote writes retain optional category and range end date without enabling
   });
   await assert.rejects(
     communityAction(client, db, user, "post.create", { quoteEnabled: true }),
-    /커뮤니티/,
+    /내용/,
   );
   await assert.rejects(
     communityAction(client, db, user, "quote.create", {}),
@@ -128,6 +128,20 @@ test("Remote launch configuration fails closed for later phases, local URLs and 
   assert.doesNotThrow(() => validateCommunityEnvironment(env));
   assert.throws(() =>
     validateCommunityEnvironment({ ...env, NEXT_PUBLIC_RELEASE_PHASE: "2" }),
+  );
+  assert.doesNotThrow(() =>
+    validateCommunityEnvironment({
+      ...env,
+      NEXT_PUBLIC_RELEASE_PHASE: "2",
+      CONSUMER_QUOTES_REMOTE_ENABLED: "true",
+    }),
+  );
+  assert.throws(() =>
+    validateCommunityEnvironment({
+      ...env,
+      NEXT_PUBLIC_RELEASE_PHASE: "3",
+      CONSUMER_QUOTES_REMOTE_ENABLED: "true",
+    }),
   );
   assert.throws(() =>
     validateCommunityEnvironment({

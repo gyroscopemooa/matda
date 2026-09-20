@@ -11,6 +11,8 @@
     "test:e2e": "playwright test",
     "local:admin": "tsx docs/local-admin.ts",
     "dev:test": "node scripts/dev-test.mjs",
+    "dev:test:phase2": "node scripts/dev-test.mjs --phase2",
+    "test:e2e:phase2": "node scripts/test-phase2-e2e.mjs",
     "lint": "eslint src tests scripts docs/local-admin.ts next.config.ts playwright.config.ts",
     "format": "prettier --write src tests scripts next.config.ts playwright.config.ts eslint.config.mjs",
     "preview": "node scripts/dev-preview.mjs",

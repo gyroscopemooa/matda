@@ -22,6 +22,8 @@ npm run preview
 
 ## 화면
 
+Phase 2 개발·로컬 검증은 완료했습니다. 운영은 Phase 1을 유지합니다. [진행 근거](docs/PHASE2_PROGRESS.md)와 [나중에 실행할 원격 적용 절차](docs/PHASE2_STAGING.md)를 참고하세요. 정확한 Phase 2 화면은 `npm run dev:test:phase2`로 3118 서버를 실행하고 `npm run test:e2e:phase2`로 검증합니다.
+
 - `/`, `/community`: 피드·검색·지역·카테고리·글/댓글/사진
 - `/posts/[id]`: 견적·비교·선택·거래확인·후기·채팅 시작
 - `/quotes`, `/providers`, `/providers/[id]`: 견적 요청 탐색, 업체·포트폴리오

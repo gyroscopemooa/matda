@@ -13,6 +13,8 @@ import {
 } from "./community-repository";
 import { imageUrl, putImage, removeImage } from "./community-storage";
 import { validateCommunityEnvironment } from "./env";
+import { flags } from "./config";
+import { quoteDocument } from "./quote-documents";
 
 const responseBody = (
   payload: unknown,
@@ -195,8 +197,32 @@ export async function remoteMedia(request: Request) {
           visibility: string;
           storage_provider: "r2" | "supabase";
         }>();
-      if (error || !data || data.visibility !== "public")
-        throw new AppError("사진을 찾을 수 없습니다.", 404);
+      if (error || !data || data.visibility !== "public") {
+        if (!flags.quotes || !(await identityFor(client)))
+          throw new AppError("파일을 찾을 수 없습니다.", 404);
+        const { data: document } = await client
+          .from("media")
+          .select("object_key,file_name,quote_id")
+          .eq("id", id)
+          .eq("visibility", "private")
+          .maybeSingle();
+        if (!document?.quote_id)
+          throw new AppError("파일을 찾을 수 없습니다.", 404);
+        const permission = await client.rpc("consumer_quote_document_allowed", {
+          target: document.quote_id,
+          writing: false,
+        });
+        if (permission.error || permission.data !== true)
+          throw new AppError("파일을 볼 권한이 없습니다.", 403);
+        const signed = await client.storage
+          .from("quote-documents")
+          .createSignedUrl(document.object_key, 60, {
+            download: document.file_name || "견적서",
+          });
+        if (signed.error)
+          throw new AppError("다운로드 링크를 발급하지 못했어요.", 503);
+        return responseBody({ url: signed.data.signedUrl }, response);
+      }
       return NextResponse.redirect(
         imageUrl(data.object_key, data.storage_provider),
         {
@@ -211,6 +237,45 @@ export async function remoteMedia(request: Request) {
     rateLimit("remote-upload:" + identity.id, 20);
     const form = await request.formData();
     const file = form.get("file");
+    if (form.get("visibility") === "private") {
+      if (!flags.quotes || !(file instanceof File))
+        throw new AppError("견적 첨부를 사용할 수 없습니다.", 403);
+      const quoteId = String(form.get("targetId") || "");
+      const permission = await client.rpc("consumer_quote_document_allowed", {
+        target: quoteId,
+        writing: true,
+      });
+      if (permission.error || permission.data !== true)
+        throw new AppError("모집 중인 본인 견적에만 첨부할 수 있어요.", 403);
+      if (file.size > 10 * 1024 * 1024)
+        throw new AppError("견적서는 10MB 이하만 첨부해주세요.");
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const { mime, name } = quoteDocument(file, bytes);
+      const id = randomUUID();
+      const key = `${identity.id}/${quoteId}/${id}`;
+      const bucket = client.storage.from("quote-documents");
+      const upload = await bucket.upload(key, bytes, {
+        contentType: mime,
+        upsert: false,
+      });
+      if (upload.error) throw new AppError("견적서 업로드에 실패했어요.", 503);
+      const saved = await client.from("media").insert({
+        id,
+        owner_id: identity.id,
+        object_key: key,
+        storage_provider: "supabase",
+        visibility: "private",
+        quote_id: quoteId,
+        file_name: name,
+        mime,
+        size: bytes.length,
+      });
+      if (saved.error) {
+        await bucket.remove([key]);
+        throw new AppError("견적서 정보를 저장하지 못했어요.", 503);
+      }
+      return responseBody({ media: { id } }, response);
+    }
     if (!(file instanceof File) || !file.size || file.size > 2 * 1024 * 1024)
       throw new AppError("사진은 최대 2MB까지 가능합니다.");
     if (form.get("visibility") !== "public")

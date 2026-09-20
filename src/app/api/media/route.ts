@@ -88,6 +88,18 @@ export async function POST(request: Request) {
           throw new AppError("본인 문서에만 첨부할 수 있습니다.", 403);
       }
       const target = db.rows.find((r) => r.id === targetId);
+      if (target?.kind === "quote") {
+        const post = db.rows.find(
+          (r) => r.kind === "post" && r.id === target.postId,
+        );
+        if (
+          !post ||
+          post.status !== "published" ||
+          post.selectedQuoteId ||
+          Date.parse(String(post.expiresAt)) <= Date.now()
+        )
+          throw new AppError("모집 중인 견적에만 첨부할 수 있습니다.", 403);
+      }
       if (
         target &&
         visibility === "public" &&

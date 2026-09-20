@@ -5,7 +5,7 @@ test("Phase 0: desktop/mobile shell, empty search, guest and reload", async ({
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/");
+  await page.goto("/community");
   await expect(
     page.getByRole("heading", { name: "필요한 일이 있나요? 일단 올려죠." }),
   ).toBeVisible();

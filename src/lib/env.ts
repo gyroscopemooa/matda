@@ -23,14 +23,15 @@ export function validateCommunityEnvironment(
 ) {
   if (
     env.DATA_ADAPTER !== "supabase" ||
-    Number(env.NEXT_PUBLIC_RELEASE_PHASE || "1") !== 1 ||
+    !(
+      Number(env.NEXT_PUBLIC_RELEASE_PHASE || "1") === 1 ||
+      (Number(env.NEXT_PUBLIC_RELEASE_PHASE) === 2 &&
+        env.CONSUMER_QUOTES_REMOTE_ENABLED === "true")
+    ) ||
     env.PAYMENTS_ENABLED === "true" ||
     env.TENDERS_ENABLED === "true"
   )
-    throw new AppError(
-      "현재 원격 연결은 커뮤니티 Phase 1 설정에서만 지원합니다.",
-      503,
-    );
+    throw new AppError("원격 공개 단계와 견적 연결 설정을 확인해주세요.", 503);
   if (
     !env.NEXT_PUBLIC_SUPABASE_URL ||
     !env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||

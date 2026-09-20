@@ -15,6 +15,47 @@ function checked<T>(result: { data: T; error: { message: string } | null }): T {
   }
   return result.data;
 }
+function checkedQuote<T>(result: {
+  data: T;
+  error: { message: string; code?: string } | null;
+}): T {
+  if (result.error) {
+    const message = result.error.message;
+    const errors: [RegExp, string, number][] = [
+      [/not released/, "견적 기능은 아직 준비 중입니다.", 403],
+      [
+        /Active account/,
+        "로그인 상태와 계정 이용 가능 여부를 확인해주세요.",
+        403,
+      ],
+      [/Provider required/, "MY에서 업체 기능을 활성화해주세요.", 403],
+      [
+        /owner required|participant required|provider required/i,
+        "이 견적을 처리할 권한이 없습니다.",
+        403,
+      ],
+      [
+        /Counterparty unavailable/,
+        "차단되었거나 이용할 수 없는 상대입니다.",
+        403,
+      ],
+      [/limit reached/i, "모집 수량 또는 연장 한도에 도달했어요.", 400],
+      [
+        /Request closed|Request expired|Open request required|Published request required/,
+        "마감되었거나 종료된 견적 요청입니다.",
+        400,
+      ],
+      [/already selected/, "이미 업체를 선택한 요청입니다.", 400],
+      [/trade confirmation/, "실제 거래 확인 후 후기를 작성해주세요.", 400],
+      [/Duplicate|duplicate key/i, "이미 등록한 요청 또는 후기입니다.", 400],
+      [/Invalid|invalid input/, "금액·날짜와 입력 조건을 확인해주세요.", 400],
+      [/Conversation closed/, "종료된 대화입니다.", 400],
+    ];
+    const mapped = errors.find(([pattern]) => pattern.test(message));
+    if (mapped) throw new AppError(mapped[1], mapped[2]);
+  }
+  return checked(result);
+}
 export async function identityFor(client: SupabaseClient) {
   const { data, error } = await client.auth.getUser();
   if (error && error.name !== "AuthSessionMissingError")
@@ -78,6 +119,7 @@ export async function loadCommunity(
     "profiles",
     "posts",
     "comments",
+    ...(flags.quotes ? ["provider_profiles", "reviews"] : []),
     ...(identity
       ? [
           "media",
@@ -87,6 +129,9 @@ export async function loadCommunity(
           "notifications",
           "blocks",
           "reports",
+          ...(flags.quotes
+            ? ["quotes", "quote_templates", "selections", "trade_confirmations"]
+            : []),
         ]
       : []),
   ];
@@ -100,7 +145,9 @@ export async function loadCommunity(
             ? ["owner_id", "target_id"]
             : table === "conversation_members"
               ? ["conversation_id", "user_id"]
-              : ["id"];
+              : ["selections", "trade_confirmations"].includes(table)
+                ? ["request_id"]
+                : ["id"];
         for (const key of keys) query = query.order(key);
         const page = checked(await query.range(offset, offset + 499)) || [];
         records.push(...page);
@@ -121,7 +168,12 @@ export async function loadCommunity(
     name: String(p.display_name),
     email: p.id === identity?.id ? identity?.email || "" : "",
     password: "",
-    role: p.id === identity?.id && isAdmin ? "admin" : "customer",
+    role:
+      p.id === identity?.id && isAdmin
+        ? "admin"
+        : lists.provider_profiles?.some((provider) => provider.user_id === p.id)
+          ? "provider"
+          : "customer",
     region: String(p.region),
     avatar: String(p.avatar || "sun"),
     disabled: !!p.disabled,
@@ -139,9 +191,25 @@ export async function loadCommunity(
   const requestsByPost = new Map(
     quoteRequests.map((request) => [request.post_id, request]),
   );
+  const requestPosts = new Map(
+    quoteRequests.map((request) => [request.request_id, request.post_id]),
+  );
+  const contacts: RecordRow[] =
+    flags.quotes && identity
+      ? checked(await client.rpc("consumer_quote_contacts")) || []
+      : [];
   for (const p of lists.posts) {
     const schedule = (p.schedule || {}) as RecordRow;
     const request = requestsByPost.get(p.id);
+    const selection = lists.selections?.find(
+      (s) => s.request_id === request?.request_id,
+    );
+    const selectedQuote = lists.quotes?.find(
+      (q) => q.id === selection?.quote_id,
+    );
+    const confirmation = lists.trade_confirmations?.find(
+      (c) => c.request_id === request?.request_id,
+    );
     rows.push({
       ...row("post", p, p.author_id ? String(p.author_id) : ""),
       ...author(p.author_id),
@@ -164,6 +232,14 @@ export async function loadCommunity(
             quoteLimit: request.quote_limit,
             extensionCount: request.extension_count,
             remoteQuoteCount: Number(request.quote_count),
+            remoteQuoteState: request.state,
+            selectedQuoteId: selection?.quote_id,
+            selectedProviderId: selectedQuote?.provider_id,
+            providerAccepted: !!selection?.provider_accepted_at,
+            contactUnlocked: !!selection?.contact_unlocked_at,
+            customerConfirmed: confirmation?.customer_response,
+            providerConfirmed: confirmation?.provider_response,
+            completedAt: confirmation?.completed_at,
           }
         : {}),
       scheduleMode: schedule.scheduleMode,
@@ -171,6 +247,50 @@ export async function loadCommunity(
       desiredEndDate: schedule.desiredEndDate,
     });
   }
+  for (const p of lists.provider_profiles || [])
+    rows.push({
+      ...row("provider", p, String(p.user_id)),
+      category: Array.isArray(p.categories) ? p.categories[0] || "" : "",
+      portfolio: Array.isArray(p.portfolio) ? p.portfolio.join("\n") : "",
+      contact: contacts.find((c) => c.user_id === p.user_id)?.phone,
+    });
+  for (const q of lists.quotes || [])
+    rows.push({
+      ...row("quote", q, String(q.provider_id)),
+      postId: requestPosts.get(q.request_id),
+      amount: Number(q.amount),
+      providerName:
+        lists.provider_profiles?.find((p) => p.user_id === q.provider_id)
+          ?.name ||
+        people.get(String(q.provider_id))?.name ||
+        "업체",
+      availableDate: q.available_date || "",
+      ...Object.fromEntries(
+        ["scope", "duration", "extraCost"].map((key) => [
+          key,
+          (q.scope as RecordRow)?.[key] || "",
+        ]),
+      ),
+      viewedAt: q.viewed_at,
+    });
+  for (const t of lists.quote_templates || [])
+    rows.push({
+      ...row("template", t, String(t.provider_id)),
+      ...Object.fromEntries(
+        ["amount", "message", "scope", "duration", "extraCost"].map((key) => [
+          key,
+          (t.fields as RecordRow)?.[key],
+        ]),
+      ),
+    });
+  for (const r of lists.reviews || [])
+    rows.push({
+      ...row("review", r, String(r.reviewer_id)),
+      ...author(r.reviewer_id),
+      postId: requestPosts.get(r.request_id),
+      providerId: r.provider_id,
+      transactionLinked: true,
+    });
   for (const c of lists.comments)
     rows.push({
       ...row("comment", c, String(c.author_id)),
@@ -180,8 +300,8 @@ export async function loadCommunity(
   for (const m of lists.media || [])
     rows.push({
       ...row("media", m, String(m.owner_id)),
-      name: "사진",
-      targetId: m.post_id || "",
+      name: m.file_name || "사진",
+      targetId: m.quote_id || m.post_id || "",
     });
   for (const c of lists.conversations || []) {
     const members = (lists.conversation_members || []).filter(
@@ -266,10 +386,37 @@ export async function communityAction(
   input: Record<string, unknown>,
 ) {
   if (user.disabled) throw new AppError("이용이 제한된 계정입니다.", 403);
+  if (
+    [
+      "profile.enableProvider",
+      "provider.save",
+      "template.save",
+      "quote.submit",
+      "quote.select",
+      "quote.chat",
+      "quote.viewed",
+      "selection.accept",
+      "trade.confirm",
+      "review.create",
+    ].includes(action)
+  ) {
+    if (!flags.quotes)
+      throw new AppError("견적 기능이 비활성화되어 있습니다.", 403);
+    // Local validation supplies helpful field errors. SQL remains authoritative
+    // for permissions, current state and limits under concurrent requests.
+    if (action !== "quote.chat")
+      act(structuredClone(db), { ...user }, action, input);
+    return checkedQuote(
+      await client.rpc("consumer_quote_action", {
+        operation: action,
+        payload: input,
+      }),
+    );
+  }
   if (["quote.enable", "quote.expand", "quote.extend"].includes(action)) {
     if (!flags.quotes)
       throw new AppError("견적 기능이 비활성화되어 있습니다.", 403);
-    const requestId = checked(
+    const requestId = checkedQuote(
       await client.rpc("consumer_quote_request", {
         target: input.id,
         operation: action.split(".")[1],
@@ -317,6 +464,7 @@ export async function communityAction(
   if (
     action.startsWith("post.") &&
     ((input.quoteEnabled &&
+      action !== "post.create" &&
       !(
         action === "post.update" &&
         db.rows.some(
@@ -328,6 +476,21 @@ export async function communityAction(
     throw new AppError("현재는 커뮤니티 글만 등록할 수 있어요.");
   const result = act(db, user, action, input);
   const r = result as Row;
+  if (action === "post.create" && r.quoteEnabled) {
+    return checkedQuote(
+      await client.rpc("consumer_quote_action", {
+        operation: action,
+        payload: {
+          ...r,
+          schedule: {
+            scheduleMode: r.scheduleMode,
+            desiredDate: r.desiredDate,
+            desiredEndDate: r.desiredEndDate,
+          },
+        },
+      }),
+    );
+  }
   switch (action) {
     case "profile.update":
     case "profile.region":

@@ -113,6 +113,7 @@ function FieldInput({
   postKind?: string;
   onKindChange?: (kind: string) => void;
 }) {
+  if (field.key === "quoteEnabled" && postKind !== "해줘요") return null;
   if (
     postKind === "자유" &&
     (field.key === "serviceRegion" || field.key === "region")
@@ -313,7 +314,14 @@ export default function Workspace({
     else dialogRef.current?.close();
   }, [modal, authOpen]);
   useEffect(() => {
-    if (!path.startsWith("/chat") && !(data.mode === "supabase" && user?.id))
+    if (
+      !path.startsWith("/chat") &&
+      !(data.mode === "supabase" && user?.id) &&
+      !(
+        flags.quotes &&
+        (path.startsWith("/posts/") || path === "/quotes" || path === "/")
+      )
+    )
       return;
     const update = () => {
       if (document.visibilityState === "visible") void refresh();
@@ -471,7 +479,10 @@ export default function Workspace({
                 key: "quoteEnabled",
                 label: "업체 견적 받기",
                 options: ["받지 않기", "견적 받기"],
-                value: "받지 않기",
+                value:
+                  path === "/quotes" || path === "/"
+                    ? "견적 받기"
+                    : "받지 않기",
               },
             ]
           : []),
@@ -609,7 +620,8 @@ export default function Workspace({
           (type === "업체 소개"
             ? r.communityPurpose === "introduction"
             : typeLabel(r.type) === type)) &&
-        (!path.startsWith("/quotes") || r.quoteEnabled) &&
+        (!(path.startsWith("/quotes") || (flags.quotes && path === "/")) ||
+          r.quoteEnabled) &&
         [r.title, r.body, r.category, r.region]
           .join(" ")
           .toLowerCase()
@@ -916,6 +928,21 @@ export default function Workspace({
               <h1>기업의 일도, 좋은 연결에서</h1>
               <p>우리 회사에 맞는 전문업체를 만나보세요.</p>
             </>
+          ) : flags.quotes && (path === "/" || path === "/quotes") ? (
+            <>
+              <div className="eyebrow">필요한 일을 한 번에</div>
+              <h1>내 요청에 맞는 견적을 비교해보세요</h1>
+              <p>
+                지역 서비스부터 전국·온라인 작업까지, 조건을 적고 업체와
+                이야기해보세요.
+              </p>
+              <button className="primary" onClick={() => createPost()}>
+                무료 견적 요청하기
+              </button>
+              <p className="muted small">
+                기본 5개 · 72시간 모집 · 업체 선택 전에도 내부 채팅 가능
+              </p>
+            </>
           ) : (
             <RotatingWelcome />
           )}
@@ -1023,6 +1050,43 @@ export default function Workspace({
             ))}
           </div>
         )}
+        {flags.quotes &&
+          !biz &&
+          (path === "/" || path === "/quotes") &&
+          user && (
+            <section className="panel">
+              <h2>내 요청과 받은 견적</h2>
+              {own("post").filter(
+                (p) => p.quoteEnabled && p.status === "published",
+              ).length ? (
+                own("post")
+                  .filter((p) => p.quoteEnabled && p.status === "published")
+                  .map((p) => (
+                    <Link
+                      className="list-row"
+                      key={p.id}
+                      href={"/posts/" + p.id}
+                    >
+                      <b>{str(p.title)}</b>
+                      <span>
+                        견적 {Number(p.quoteCount || 0)}/{str(p.quoteLimit)} ·{" "}
+                        {p.quoteState === "selected"
+                          ? "선택 완료"
+                          : p.quoteState === "expired"
+                            ? "마감"
+                            : "확인하기"}
+                      </span>
+                    </Link>
+                  ))
+              ) : (
+                <p>
+                  아직 견적 요청이 없어요. 기존 해줘요 글에서도 견적을 받을 수
+                  있습니다.
+                </p>
+              )}
+              <Link href="/community">질문·후기·기존 해줘요 글 보기 →</Link>
+            </section>
+          )}
         {filters()}
         <div className="section-caption">
           <span>
@@ -1035,7 +1099,8 @@ export default function Workspace({
     );
   }
   function quoteForm(post: Row) {
-    const template = own("template")[0];
+    const existing = own("quote").find((q) => q.postId === post.id);
+    const template = existing || own("template")[0];
     openForm(
       "우리 업체의 견적 보내기",
       [
@@ -1052,10 +1117,23 @@ export default function Workspace({
           required: true,
           value: str(template?.message),
         },
-        { key: "availableDate", label: "가능일 (선택)", type: "date" },
+        {
+          key: "availableDate",
+          label: "가능일 (선택)",
+          type: "date",
+          value: str(existing?.availableDate),
+        },
         { key: "scope", label: "포함범위 (선택)", value: str(template?.scope) },
-        { key: "duration", label: "예상시간 (선택)" },
-        { key: "extraCost", label: "추가비용 조건 (선택)" },
+        {
+          key: "duration",
+          label: "예상시간 (선택)",
+          value: str(template?.duration),
+        },
+        {
+          key: "extraCost",
+          label: "추가비용 조건 (선택)",
+          value: str(template?.extraCost),
+        },
       ],
       async (v) => {
         await action("quote.submit", { ...v, postId: post.id });
@@ -1067,6 +1145,29 @@ export default function Workspace({
       (r) => r.kind === "quote" && r.postId === post.id,
     );
     const isOwner = post.ownerId === user?.id;
+    const accepting =
+      !post.selectedQuoteId &&
+      post.remoteQuoteState !== "selected" &&
+      post.status === "published" &&
+      Date.parse(str(post.expiresAt)) > Date.now();
+    const providerInfo = (q: Row) => {
+      const profile = rows.find(
+        (p) => p.kind === "provider" && p.ownerId === q.ownerId,
+      );
+      const reviews = rows.filter(
+        (r) => r.kind === "review" && r.providerId === q.ownerId,
+      );
+      return {
+        profile,
+        rating: reviews.length
+          ? (
+              reviews.reduce((sum, r) => sum + Number(r.rating), 0) /
+              reviews.length
+            ).toFixed(1)
+          : "없음",
+        count: reviews.length,
+      };
+    };
     return (
       <>
         <Link
@@ -1278,15 +1379,27 @@ export default function Workspace({
         {flags.quotes && !!post.quoteEnabled && (
           <section className="panel">
             <h2>
-              도착한 견적 <span className="count">{quotes.length}</span>
+              도착한 견적{" "}
+              <span className="count">{Number(post.quoteCount || 0)}</span>
             </h2>
             <p className="muted">
               모집 마감 {new Date(str(post.expiresAt)).toLocaleString("ko-KR")}{" "}
               · 최대 {str(post.quoteLimit)}개
             </p>
+            <p className="muted">
+              {post.quoteState === "selected"
+                ? "업체 선택 완료"
+                : post.quoteState === "expired"
+                  ? "모집기간 종료"
+                  : post.quoteState === "filled"
+                    ? "모집 수량 마감"
+                    : "견적 모집 중"}{" "}
+              · 연장 {Number(post.extensionCount || 0)}/2회
+            </p>
             {isOwner && (
               <div className="actions">
                 <button
+                  disabled={!accepting || Number(post.quoteLimit) >= 10}
                   onClick={() =>
                     run(() => action("quote.expand", { id: post.id }))
                   }
@@ -1294,6 +1407,11 @@ export default function Workspace({
                   추가 5개 받기
                 </button>
                 <button
+                  disabled={
+                    !!post.selectedQuoteId ||
+                    Number(post.extensionCount) >= 2 ||
+                    Date.parse(str(post.expiresAt)) + 24 * 3600000 <= Date.now()
+                  }
                   onClick={() =>
                     run(() => action("quote.extend", { id: post.id }))
                   }
@@ -1303,7 +1421,15 @@ export default function Workspace({
               </div>
             )}
             {user?.role === "provider" && !isOwner && (
-              <button className="primary" onClick={() => quoteForm(post)}>
+              <button
+                className="primary"
+                disabled={
+                  !accepting ||
+                  (Number(post.quoteCount) >= Number(post.quoteLimit) &&
+                    !quotes.some((q) => q.ownerId === user.id))
+                }
+                onClick={() => quoteForm(post)}
+              >
                 견적 보내기 / 수정
               </button>
             )}
@@ -1311,6 +1437,13 @@ export default function Workspace({
               {quotes.map((q) => (
                 <div className="quote-card" key={q.id}>
                   <h3>{str(q.providerName)}</h3>
+                  <p className="muted">
+                    평점 {providerInfo(q).rating} · 거래 후기{" "}
+                    {providerInfo(q).count}개 ·{" "}
+                    {providerInfo(q).profile?.verification === "verified"
+                      ? "사업자 확인 완료"
+                      : "사업자 미확인"}
+                  </p>
                   <strong className="price">{currency(q.amount)}</strong>
                   <label className="compare-check">
                     <input
@@ -1338,6 +1471,27 @@ export default function Workspace({
                     <dd>{str(q.extraCost) || "별도 문의"}</dd>
                   </dl>
                   {privateFiles(q)}
+                  {(isOwner || q.ownerId === user?.id) && (
+                    <button
+                      onClick={() =>
+                        run(async () => {
+                          const conversation = await action("quote.chat", {
+                            id: q.id,
+                          });
+                          router.push("/chat/" + conversation.id);
+                        }, "")
+                      }
+                    >
+                      이 견적으로 채팅
+                    </button>
+                  )}
+                  {isOwner && post.selectedQuoteId === q.id && (
+                    <p className="notice">
+                      {providerInfo(q).profile?.contact
+                        ? `선택 업체 연락처: ${str(providerInfo(q).profile?.contact)}`
+                        : "연락처는 선택·수락 정책에 따라 공개됩니다. 내부 채팅으로도 협의할 수 있어요."}
+                    </p>
+                  )}
                   {isOwner && !post.selectedQuoteId && (
                     <button
                       onClick={() =>
@@ -1369,6 +1523,8 @@ export default function Workspace({
                       <th>가격</th>
                       <th>가능일</th>
                       <th>범위</th>
+                      <th>예상시간 / 추가비용</th>
+                      <th>후기 / 인증</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1380,6 +1536,18 @@ export default function Workspace({
                           <td>{currency(q.amount)}</td>
                           <td>{str(q.availableDate) || "협의"}</td>
                           <td>{str(q.scope) || "협의"}</td>
+                          <td>
+                            {str(q.duration) || "협의"} /{" "}
+                            {str(q.extraCost) || "별도 문의"}
+                          </td>
+                          <td>
+                            {providerInfo(q).rating} ({providerInfo(q).count}개)
+                            /{" "}
+                            {providerInfo(q).profile?.verification ===
+                            "verified"
+                              ? "확인"
+                              : "미확인"}
+                          </td>
                         </tr>
                       ))}
                   </tbody>
@@ -1391,81 +1559,95 @@ export default function Workspace({
                 "아직 확인할 견적이 없어요",
                 "견적은 요청자와 작성 업체만 확인할 수 있어요.",
               )}
-            {!!post.selectedQuoteId && (
-              <div className="notice">
-                <h3>실제로 거래하셨나요?</h3>
-                {post.selectedProviderId === user?.id &&
-                  !post.providerAccepted && (
+            {!!post.selectedQuoteId &&
+              (isOwner || post.selectedProviderId === user?.id) && (
+                <div className="notice">
+                  <h3>실제로 거래하셨나요?</h3>
+                  {post.selectedProviderId === user?.id &&
+                    !post.providerAccepted && (
+                      <button
+                        onClick={() =>
+                          run(() => action("selection.accept", { id: post.id }))
+                        }
+                      >
+                        업체 선택 수락
+                      </button>
+                    )}
+                  <p>
+                    고객 확인: {post.customerConfirmed ? "완료" : "미확인"} ·
+                    업체 확인: {post.providerConfirmed ? "완료" : "미확인"}
+                  </p>
+                  <div className="actions">
                     <button
                       onClick={() =>
-                        run(() => action("selection.accept", { id: post.id }))
-                      }
-                    >
-                      업체 선택 수락
-                    </button>
-                  )}
-                <p>
-                  고객 확인: {post.customerConfirmed ? "완료" : "미확인"} · 업체
-                  확인: {post.providerConfirmed ? "완료" : "미확인"}
-                </p>
-                <div className="actions">
-                  <button
-                    onClick={() =>
-                      run(() =>
-                        action("trade.confirm", {
-                          id: post.id,
-                          confirmed: true,
-                        }),
-                      )
-                    }
-                  >
-                    거래 / 작업 완료 확인
-                  </button>
-                  <button
-                    onClick={() =>
-                      run(() =>
-                        action("trade.confirm", {
-                          id: post.id,
-                          confirmed: false,
-                        }),
-                      )
-                    }
-                  >
-                    아직 거래 전이에요
-                  </button>
-                  {isOwner && (
-                    <button
-                      onClick={() =>
-                        openForm(
-                          "거래 후기",
-                          [
-                            {
-                              key: "rating",
-                              label: "평점",
-                              options: ["5", "4", "3", "2", "1"],
-                            },
-                            {
-                              key: "body",
-                              label: "후기",
-                              type: "textarea",
-                              required: true,
-                            },
-                          ],
-                          async (v) => {
-                            await action("review.create", {
-                              ...v,
-                              id: post.id,
-                            });
-                          },
+                        run(() =>
+                          action("trade.confirm", {
+                            id: post.id,
+                            confirmed: true,
+                          }),
                         )
                       }
                     >
-                      후기 작성
+                      거래 / 작업 완료 확인
                     </button>
-                  )}
+                    <button
+                      onClick={() =>
+                        run(() =>
+                          action("trade.confirm", {
+                            id: post.id,
+                            confirmed: false,
+                          }),
+                        )
+                      }
+                    >
+                      아직 거래 전이에요
+                    </button>
+                    {isOwner &&
+                      !rows.some(
+                        (r) => r.kind === "review" && r.postId === post.id,
+                      ) && (
+                        <button
+                          disabled={!post.customerConfirmed}
+                          onClick={() =>
+                            openForm(
+                              "거래 후기",
+                              [
+                                {
+                                  key: "rating",
+                                  label: "평점",
+                                  options: ["5", "4", "3", "2", "1"],
+                                },
+                                {
+                                  key: "body",
+                                  label: "후기",
+                                  type: "textarea",
+                                  required: true,
+                                },
+                              ],
+                              async (v) => {
+                                await action("review.create", {
+                                  ...v,
+                                  id: post.id,
+                                });
+                              },
+                            )
+                          }
+                        >
+                          후기 작성
+                        </button>
+                      )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            {rows
+              .filter((r) => r.kind === "review" && r.postId === post.id)
+              .map((review) => (
+                <article className="notice" key={review.id}>
+                  <h3>거래 연결 후기 · {str(review.rating)}점</h3>
+                  <p>{str(review.body)}</p>
+                  <small>고객의 거래 자가확인에 기반한 후기입니다.</small>
+                </article>
+              ))}
           </section>
         )}
         <section className="panel">
@@ -1984,26 +2166,28 @@ export default function Workspace({
               >
                 프로필 · 포트폴리오
               </button>
-              <button
-                onClick={() =>
-                  openForm(
-                    "사업자 확인 요청",
-                    [
-                      {
-                        key: "note",
-                        label: "사업자·자격 확인 요청 내용",
-                        type: "textarea",
-                        required: true,
+              {flags.providers && (
+                <button
+                  onClick={() =>
+                    openForm(
+                      "사업자 확인 요청",
+                      [
+                        {
+                          key: "note",
+                          label: "사업자·자격 확인 요청 내용",
+                          type: "textarea",
+                          required: true,
+                        },
+                      ],
+                      async (v) => {
+                        await action("verification.request", v);
                       },
-                    ],
-                    async (v) => {
-                      await action("verification.request", v);
-                    },
-                  )
-                }
-              >
-                사업자 확인 요청
-              </button>
+                    )
+                  }
+                >
+                  사업자 확인 요청
+                </button>
+              )}
               <button
                 onClick={() =>
                   openForm(
@@ -2018,6 +2202,8 @@ export default function Workspace({
                       },
                       { key: "message", label: "기본 설명", required: true },
                       { key: "scope", label: "포함범위" },
+                      { key: "duration", label: "예상시간" },
+                      { key: "extraCost", label: "추가비용 조건" },
                     ],
                     async (v) => {
                       await action("template.save", v);
@@ -2459,6 +2645,17 @@ export default function Workspace({
     const files = rows.filter(
       (r) => r.kind === "media" && r.targetId === target.id,
     );
+    const canAttach =
+      target.ownerId === user?.id &&
+      (target.kind !== "quote" ||
+        rows.some(
+          (p) =>
+            p.kind === "post" &&
+            p.id === target.postId &&
+            p.status === "published" &&
+            !p.selectedQuoteId &&
+            Date.parse(str(p.expiresAt)) > Date.now(),
+        ));
     return (
       <div className="attachments">
         <h3>첨부 문서</h3>
@@ -2482,13 +2679,17 @@ export default function Workspace({
             {f.bidVersion ? ` · v${f.bidVersion}` : ""}
           </button>
         ))}
-        {target.ownerId === user?.id && (
+        {canAttach && (
           <label className="upload-button">
             <Plus size={16} />
             문서 첨부
             <input
               type="file"
-              accept=".pdf,.xlsx,.xls,.docx,.doc,.zip,.jpg,.png,.webp,.dwg"
+              accept={
+                data.mode === "supabase" && target.kind === "quote"
+                  ? ".pdf,.xlsx,.docx,.zip,.jpg,.jpeg,.png,.webp"
+                  : ".pdf,.xlsx,.xls,.docx,.doc,.zip,.jpg,.png,.webp,.dwg"
+              }
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file)
@@ -3872,7 +4073,13 @@ export default function Workspace({
                         );
                         if (!t) return;
                         const form = e.currentTarget.form!;
-                        for (const name of ["amount", "message", "scope"]) {
+                        for (const name of [
+                          "amount",
+                          "message",
+                          "scope",
+                          "duration",
+                          "extraCost",
+                        ]) {
                           const input = form.elements.namedItem(
                             name,
                           ) as HTMLInputElement | null;
