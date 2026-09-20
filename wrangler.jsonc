@@ -2,7 +2,10 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "matda",
   "keep_vars": true,
-  "main": ".open-next/worker.js",
+  "main": "workers/matda.mjs",
+  "triggers": {
+    "crons": ["0,20,40 0 * * *"]
+  },
   "compatibility_date": "2026-09-19",
   "compatibility_flags": [
     "nodejs_compat",

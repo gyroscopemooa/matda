@@ -340,3 +340,9 @@ Phase1에서도 견적받기·업체찾기·맡다 비즈 메뉴 노출. 미출�
 ## 2026-09-20 가이드 수동·자동 운영 모드
 0013 SQL: 관리자 전용 수동/매일초안/일반팁자동발행 설정. 기본 수동, 기존 초안 자동공개 없음. 예약 생성만 자동발행 가능, 금액·계약·법률·안전 키워드/분야는 초안 유지(사실검증 대체 아님). 자동발행과 사람검수 이력 구분, 공개글에 AI자동발행 안내. 수동 생성 항상 초안. 35개 테스트/브라우저2개 통과. 설정SQL 및 예약Worker 외부배포 필요.
 
+
+
+### 기존 Worker에 가이드 예약 실행 통합
+- 별도 matda-guide-scheduler 제거, 기존 matda에 OpenNext custom entrypoint와 Cron 추가.
+- 기존 matda의 GUIDE_AUTOMATION_ENABLED=true 및 관리자 모드로 제어.
+- Supabase CLI 로그인과 프로젝트 link는 별개이며, 기존 SQL 수동 적용 기록 확인 후 push 필요.

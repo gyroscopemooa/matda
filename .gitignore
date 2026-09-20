@@ -19,3 +19,4 @@ docs/*.png
 .wrangler/
 .dev.vars*
 cloudflare-env.d.ts
+supabase/.temp/

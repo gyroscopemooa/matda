@@ -20,27 +20,22 @@ Cloudflare → Workers & Pages → matda → Settings → Variables and Secrets�
 |---|---|---|
 | Secret | OPENAI_API_KEY | 본인의 OpenAI API 프로젝트 키 |
 | Secret | SUPABASE_SERVICE_ROLE_KEY | 해당 Supabase 프로젝트 서버용 service_role 키 또는 서버 Secret key |
-| Secret | GUIDE_CRON_SECRET | 임의의 긴 난수 32자 이상. 스케줄러에도 같은 값 등록 |
+| Secret | GUIDE_CRON_SECRET | 임의의 긴 난수 32자 이상. 기존 matda에만 등록 |
 | 선택 Text | OPENAI_GUIDE_MODEL | 기본 gpt-4o-mini. 계정에서 사용 가능한 모델로 변경 가능 |
 
 이 값들은 NEXT_PUBLIC 접두사를 붙이거나 브라우저/채팅/저장소에 올리지 않는다. ChatGPT 구독과 API 이용은 별개이므로 API 프로젝트 결제·사용량 설정을 확인한다.
 관리자 Google 계정으로 matda.net/admin 접속 → 가이드 편집실 → 오늘 초안 생성. 성공하면 초안만 저장된다. 같은 날 다시 눌러도 새 글을 중복 생성하지 않는다.
 
-## 3. 매일 예약 실행 Worker
+## 3. 기존 matda Worker에서 매일 예약 실행
 
-메인 OpenNext Worker를 덮어쓰지 않고 작은 별도 Worker `matda-guide-scheduler`가 메인 앱을 호출한다.
+새 Worker를 만들지 않는다. `workers/matda.mjs`가 OpenNext의 기존 요청 처리를 유지하면서 scheduled 핸들러를 추가한다.
+기존 Git 빌드/배포 명령(`npm run cf:build`, `npm run cf:deploy`)은 그대로다.
+`wrangler.jsonc`의 Cron이 배포 시 함께 적용된다.
 
-Cloudflare CLI가 로그인된 환경에서:
-
-```powershell
-npx wrangler deploy --config workers/guide-scheduler/wrangler.jsonc
-npx wrangler secret put GUIDE_CRON_SECRET --config workers/guide-scheduler/wrangler.jsonc
-```
-
-또는 동일 Git 저장소를 연결한 별도 Workers 프로젝트 생성: 빌드 명령 비움, 배포 명령 `npx wrangler deploy --config workers/guide-scheduler/wrangler.jsonc`, 루트 경로 `/`.
-스케줄러 Worker Settings에서 Secret `GUIDE_CRON_SECRET`을 메인과 동일하게 넣고, Text `GUIDE_AUTOMATION_ENABLED=true`를 추가하면 활성화된다. 끄려면 false로 변경한다.
-Secret과 활성화 값은 설정 파일에 담지 않으며 keep_vars로 대시보드 값을 유지한다.
-서비스 바인딩 MATDA → matda는 설정 파일에 포함되어 있다.
+기존 **matda** → Settings → Variables and Secrets에 Text `GUIDE_AUTOMATION_ENABLED=true`를 추가한다.
+`GUIDE_CRON_SECRET`과 OpenAI/Supabase Secrets도 기존 matda에만 둔다. 중단하려면 활성화 값을 false로 바꾼다.
+관리자에서 수동/매일 초안/일반 팁 자동 발행을 선택한다. 기본값 수동에서는 예약이 와도 AI를 호출하지 않는다.
+keep_vars로 대시보드 환경변수를 유지하며, 이미 있는 WORKER_SELF_REFERENCE 바인딩으로 앱 API를 호출한다.
 
 한국 시간 매일 09:00 시도, 실패 시 09:20·09:40 재시도. 성공한 날은 추가 AI 호출 없이 건너뛴다. 날짜별 최대 3회, 동시에 실행되어도 DB에서 한 작업만 확보한다. 오류는 편집실 최근 생성 기록 및 Worker Logs에서 확인한다.
 
