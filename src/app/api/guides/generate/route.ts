@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   )
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    return Response.json(await generateDailyGuide(), {
+    return Response.json(await generateDailyGuide(true), {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (e) {

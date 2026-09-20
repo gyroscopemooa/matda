@@ -6,6 +6,7 @@ type Article = {
   status: string;
   content: GuideContent;
   generation_day: string;
+  publication_mode?: string;
 };
 type Run = {
   day: string;
@@ -14,6 +15,8 @@ type Run = {
   error: string | null;
 };
 export default function GuideAdmin() {
+  const [mode, setMode] = useState("manual");
+  const [automationReady, setAutomationReady] = useState(false);
   const [articles, setArticles] = useState<Article[]>([]),
     [runs, setRuns] = useState<Run[]>([]),
     [selected, setSelected] = useState<Article | null>(null);
@@ -26,6 +29,8 @@ export default function GuideAdmin() {
     if (!r.ok) throw new Error(data.error);
     setArticles(data.articles);
     setRuns(data.runs);
+    setMode(data.automationMode || "manual");
+    setAutomationReady(!!data.automationReady);
   }
   useEffect(() => {
     const controller = new AbortController();
@@ -35,6 +40,8 @@ export default function GuideAdmin() {
         if (!r.ok) throw new Error(data.error);
         setArticles(data.articles);
         setRuns(data.runs);
+        setMode(data.automationMode || "manual");
+        setAutomationReady(!!data.automationReady);
       })
       .catch((e) => {
         if (!controller.signal.aborted) setNotice(e.message);
@@ -79,8 +86,37 @@ export default function GuideAdmin() {
     <section className="panel guide-admin">
       <h2>가이드 편집실</h2>
       <p>
-        AI 초안은 검수 후 발행합니다. 실제 가격·법률·안전 관련 표현은 공식
-        자료와 대조해주세요.
+        수동 생성과 예약 생성을 함께 사용할 수 있습니다. 실제 가격·법률·안전
+        관련 표현은 공식 자료와 대조해주세요.
+      </p>
+      <fieldset disabled={busy || !automationReady}>
+        <legend>매일 가이드 운영 방식</legend>
+        <label className="field">
+          자동화 방식
+          <select value={mode} onChange={(e) => setMode(e.target.value)}>
+            <option value="manual">
+              수동 — 버튼으로 초안 생성·검수 후 발행
+            </option>
+            <option value="draft">매일 초안 — 오전 9시 생성·발행은 직접</option>
+            <option value="auto">
+              일반 팁 자동 발행 — 검토가 필요한 글은 초안 유지
+            </option>
+          </select>
+        </label>
+        <button onClick={() => send({ action: "settings", mode })}>
+          자동화 설정 저장
+        </button>
+      </fieldset>
+      {!automationReady && (
+        <p className="muted">
+          예약 모드 설정은 0013 SQL 적용 후 사용할 수 있습니다.
+        </p>
+      )}
+      <p className="muted small">
+        예약 Worker 배포·활성화가 먼저 필요합니다. 계약·법률·금액·안전 관련
+        표현이 감지된 글은 자동 발행하지 않습니다. 자동 분류는 사실 검증이
+        아닙니다. 설정 변경은 이후 생성되는 글에 적용되며, 아래 수동 버튼은 항상
+        초안만 만듭니다.
       </p>
       <button disabled={busy} onClick={() => send({ action: "generate" })}>
         {busy ? "처리 중…" : "오늘 초안 생성 / 실패 재시도"}
@@ -106,7 +142,9 @@ export default function GuideAdmin() {
           >
             {a.generation_day} ·{" "}
             {a.status === "published"
-              ? "발행"
+              ? a.publication_mode === "auto"
+                ? "자동 발행"
+                : "발행"
               : a.status === "held"
                 ? "보류"
                 : "초안"}{" "}

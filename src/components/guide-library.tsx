@@ -42,6 +42,12 @@ export default function GuideLibrary({
           {guide.author} · 업데이트 {guide.updatedAt}
         </p>
         <p>{guide.intro}</p>
+        {guide.autoPublished && (
+          <p className="muted small">
+            AI를 활용해 자동 작성·발행한 일반 정보입니다. 실제 의뢰 조건은
+            서비스 제공자와 확인해주세요.
+          </p>
+        )}
         {guide.sections?.map((section) => (
           <section key={section.heading}>
             <h2>{section.heading}</h2>

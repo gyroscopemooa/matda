@@ -35,17 +35,33 @@ test("Guide editor requires review and sends edited content for publication", as
     },
   };
   let published = false;
+  let automationMode = "manual";
   await page.route("**/api/guides/admin", async (route) => {
     if (route.request().method() === "POST") {
       const body = route.request().postDataJSON();
-      expect(body.reviewed).toBe(true);
-      expect(body.content.title).toBe("검수한 가이드");
-      published = body.status === "published";
+      if (body.action === "settings") {
+        automationMode = body.mode;
+      } else {
+        expect(body.reviewed).toBe(true);
+        expect(body.content.title).toBe("검수한 가이드");
+        published = body.status === "published";
+      }
     }
-    await route.fulfill({ json: { articles: [article], runs: [] } });
+    await route.fulfill({
+      json: {
+        articles: [article],
+        runs: [],
+        automationMode,
+        automationReady: true,
+      },
+    });
   });
   await page.goto("/admin");
   const editor = page.locator(".guide-admin");
+  await editor.getByLabel("자동화 방식").selectOption("auto");
+  await editor.getByRole("button", { name: "자동화 설정 저장" }).click();
+  await expect(editor.getByRole("status")).toHaveText("처리했습니다.");
+  expect(automationMode).toBe("auto");
   await editor.getByRole("button", { name: /테스트 가이드/ }).click();
   await expect(
     editor.getByRole("button", { name: "검수 후 발행" }),

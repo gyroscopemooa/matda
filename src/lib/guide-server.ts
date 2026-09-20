@@ -1,7 +1,12 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { publishedGuides, type Guide } from "./guides";
-import { guideTopics, koreanDay, validateGuide } from "./guide-content";
+import {
+  guideTopics,
+  koreanDay,
+  validateGuide,
+  canAutoPublish,
+} from "./guide-content";
 import { AppError } from "./types";
 import { serverSetting } from "./server-setting";
 
@@ -20,7 +25,7 @@ export const readGuides = cache(async (): Promise<Guide[]> => {
   if (process.env.DATA_ADAPTER !== "supabase") return publishedGuides;
   const { data, error } = await db()
     .from("guide_articles")
-    .select("slug,content,updated_at,status")
+    .select("*")
     .eq("status", "published")
     .order("published_at", { ascending: false });
   if (error) {
@@ -39,15 +44,27 @@ export const readGuides = cache(async (): Promise<Guide[]> => {
       updatedAt: r.updated_at.slice(0, 10),
       status: "published" as const,
       author: "해죠 운영팀",
+      autoPublished: r.publication_mode === "auto",
     })),
     ...publishedGuides,
   ];
 });
-export async function generateDailyGuide() {
+export async function generateDailyGuide(scheduled = false) {
+  const client = db(true);
+  if (scheduled) {
+    const settings = await client
+      .from("guide_automation_settings")
+      .select("mode")
+      .eq("id", true)
+      .single();
+    if (settings.error)
+      throw new AppError("0013 자동화 설정 SQL을 먼저 적용해주세요.", 503);
+    if (settings.data.mode === "manual")
+      return { status: "disabled", day: koreanDay() };
+  }
   const key = serverSetting("OPENAI_API_KEY");
   if (!key) throw new AppError("OPENAI_API_KEY Secret을 설정해주세요.", 503);
-  const client = db(true),
-    day = koreanDay(),
+  const day = koreanDay(),
     token = crypto.randomUUID();
   const claimed = await client.rpc("claim_guide_day", {
     p_day: day,
@@ -145,13 +162,23 @@ export async function generateDailyGuide() {
       recent.data?.some((r) => r.content.title.trim() === content.title.trim())
     )
       throw new Error("duplicate-title");
-    const saved = await client.rpc("finish_guide_day", {
+    let saved = await client.rpc("finish_guide_day_v2", {
       p_day: day,
       p_token: token,
       p_content: content,
+      p_scheduled: scheduled,
+      p_eligible: canAutoPublish(content),
     });
+    if (!scheduled && saved.error?.code === "PGRST202") {
+      saved = await client.rpc("finish_guide_day", {
+        p_day: day,
+        p_token: token,
+        p_content: content,
+      });
+      if (!saved.error && saved.data) saved.data = "draft";
+    }
     if (saved.error || !saved.data) throw new Error("db-save");
-    return { status: "draft", day };
+    return { status: saved.data, day };
   } catch (e) {
     const code =
       e instanceof Error && /^(openai-|db-|duplicate-title)/.test(e.message)

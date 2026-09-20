@@ -9,6 +9,20 @@ export type GuideContent = {
   sources: string[];
   reviewNotes: string;
 };
+
+/** Automatic publishing is limited to general tips; this is not fact checking. */
+export function canAutoPublish(content: GuideContent): boolean {
+  if (
+    !["청소·관리", "이사·운송", "수리·설치", "제작·디지털", "자동차"].includes(
+      content.category,
+    )
+  )
+    return false;
+  const text = JSON.stringify(content);
+  return !/법률|법적|법령|법원|소송|분쟁|손해배상|계약금|선금|중도금|잔금|지급|결제|소유권|저작권|안전관리|전기|소방|승강기|가스|의무|자격|면허|보험|보상|\d[\d,.]*\s*(만\s*원|천\s*원|원|%|퍼센트)/.test(
+    text,
+  );
+}
 export const guideTopics = [
   ["청소·관리", "입주청소 작업 범위를 설명하는 사진 준비"],
   ["제작·디지털", "작은 가게 홈페이지 외주 요청서 작성"],

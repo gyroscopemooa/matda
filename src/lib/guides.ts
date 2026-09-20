@@ -1,4 +1,5 @@
 export type Guide = {
+  autoPublished?: boolean;
   sections?: { heading: string; body: string }[];
   sources?: string[];
   slug: string;

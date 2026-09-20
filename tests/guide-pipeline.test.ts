@@ -2,7 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
-import { koreanDay, validateGuide } from "../src/lib/guide-content";
+import {
+  koreanDay,
+  validateGuide,
+  canAutoPublish,
+} from "../src/lib/guide-content";
 import { act } from "../src/lib/domain";
 import { generateDailyGuide } from "../src/lib/guide-server";
 import type { Database, User, Row } from "../src/lib/types";
@@ -51,20 +55,33 @@ test("AI pipeline stores a validated draft, skips duplicates, and records provid
     }
     if (url.pathname.endsWith("/claim_guide_day"))
       return Response.json(claimed);
-    if (url.pathname.endsWith("/finish_guide_day")) {
+    if (url.pathname.endsWith("/finish_guide_day_v2")) {
       saved = await req.json();
-      return Response.json(true);
+      return Response.json("draft");
     }
     if (url.pathname.endsWith("/guide_generation_runs")) {
       recorded = true;
       return new Response(null, { status: 204 });
     }
+    if (url.pathname.endsWith("/guide_automation_settings"))
+      return Response.json({ mode: "manual" });
     if (url.pathname.endsWith("/guide_articles")) return Response.json([]);
     throw new Error("Unexpected outbound request");
   };
   try {
     assert.equal((await generateDailyGuide()).status, "draft");
     assert.ok(saved);
+    assert.equal((await generateDailyGuide(true)).status, "disabled");
+    assert.equal(calls, 1);
+    assert.equal(canAutoPublish({ ...content, category: "청소·관리" }), true);
+    assert.equal(
+      canAutoPublish({
+        ...content,
+        category: "청소·관리",
+        intro: "계약금 30% 지급",
+      }),
+      false,
+    );
     claimed = false;
     assert.equal((await generateDailyGuide()).status, "skipped");
     assert.equal(calls, 1);
@@ -189,6 +206,61 @@ test("Guide SQL: claims, bounded retry, draft isolation and admin publication", 
     assert.equal(
       (await db.query("select * from guide_articles")).rows.length,
       1,
+    );
+    await db.exec("reset role");
+    const modes = await readFile(
+      "supabase/migrations/0013_guide_automation_modes.sql",
+      "utf8",
+    );
+    await db.exec(modes);
+    await db.exec(modes);
+    await db.exec(
+      "set role authenticated;select set_config('test.admin','false',false)",
+    );
+    assert.equal(
+      (
+        await db.query(
+          "update guide_automation_settings set mode='auto' returning id",
+        )
+      ).rows.length,
+      0,
+    );
+    await db.exec(
+      "reset role;update guide_automation_settings set mode='auto';set role service_role",
+    );
+    for (const [day, scheduled, eligible, expected] of [
+      ["2026-09-22", true, true, "published"],
+      ["2026-09-23", false, true, "draft"],
+      ["2026-09-24", true, false, "draft"],
+    ] as const) {
+      assert.equal(await claim(day), true);
+      assert.equal(
+        (
+          await db.query<{ state: string }>(
+            `select finish_guide_day_v2('${day}','${token}','{"title":"test"}',${scheduled},${eligible}) state`,
+          )
+        ).rows[0].state,
+        expected,
+      );
+    }
+    const automated = (
+      await db.query<{ reviewed: boolean; reviewed_by: string | null }>(
+        "select reviewed,reviewed_by from guide_articles where generation_day='2026-09-22'",
+      )
+    ).rows[0];
+    assert.equal(automated.reviewed, false);
+    assert.equal(automated.reviewed_by, null);
+    assert.equal(await claim("2026-09-25"), true);
+    await db.exec(
+      "reset role;update guide_automation_settings set mode='manual';set role service_role",
+    );
+    assert.equal(
+      (
+        await db.query<{ state: string }>(
+          `select finish_guide_day_v2('2026-09-25','${token}','{"title":"test"}',true,true) state`,
+        )
+      ).rows[0].state,
+      "draft",
     );
   } finally {
     await db.close();
