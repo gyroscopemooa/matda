@@ -1985,11 +1985,24 @@ dialog .muted {
   display: none;
 }
 .dialog-notice {
-  font-size: 12px;
-  background: #eef4ff;
-  color: #426891;
-  padding: 9px;
-  border-radius: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  background: #20344f;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px #15273f30;
+}
+.dialog-notice .icon-button {
+  flex-shrink: 0;
+  color: inherit;
+  background: transparent;
 }
 .post-card p {
   overflow-wrap: anywhere;

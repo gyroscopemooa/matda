@@ -404,11 +404,7 @@ export default function Workspace({
                 ? "business"
                 : "personal"),
           ),
-          category: str(
-            existing?.category ||
-              guide?.category ||
-              (biz ? businessCategories[0] : categories[0]),
-          ),
+          category: str(existing?.category || guide?.category || ""),
           biz,
         },
         { key: "title", label: "제목 (선택)", value: str(existing?.title) },
@@ -3580,7 +3576,7 @@ export default function Workspace({
           <span>MY</span>
         </Link>
       </nav>
-      {toast && (
+      {toast && !modal && !authOpen && (
         <div className="toast" role="status">
           {toast}
           <button aria-label="알림 닫기" onClick={() => setToast("")}>
@@ -3621,9 +3617,17 @@ export default function Workspace({
           </button>
         </div>
         {toast && (
-          <p role="status" className="dialog-notice">
-            {toast}
-          </p>
+          <div role="status" className="dialog-notice">
+            <span>{toast}</span>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="알림 닫기"
+              onClick={() => setToast("")}
+            >
+              <X size={16} />
+            </button>
+          </div>
         )}
         {authOpen && data.mode !== "local" ? (
           <div>
