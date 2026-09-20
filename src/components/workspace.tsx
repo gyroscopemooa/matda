@@ -104,7 +104,28 @@ const currency = (v: unknown) => Number(v || 0).toLocaleString("ko-KR") + "원";
 const date = (v: unknown) => new Date(str(v)).toLocaleDateString("ko-KR");
 const typeLabel = (v: unknown) =>
   postTypes[v as keyof typeof postTypes] || str(v);
-function FieldInput({ field }: { field: Field }) {
+function FieldInput({
+  field,
+  postKind,
+  onKindChange,
+}: {
+  field: Field;
+  postKind?: string;
+  onKindChange?: (kind: string) => void;
+}) {
+  if (
+    postKind === "자유" &&
+    (field.key === "serviceRegion" || field.key === "region")
+  )
+    return (
+      <>
+        <input type="hidden" name="serviceMode" value="local" />
+        <p className="muted small">
+          지역 (선택) · 선택하지 않아도 글을 등록할 수 있어요.
+        </p>
+        <RegionPicker value={field.value} />
+      </>
+    );
   if (field.key === "serviceRegion")
     return <ServiceLocation region={field.value} mode={field.serviceMode} />;
   if (field.key === "avatar") return <ProfileAvatar value={field.value} />;
@@ -112,6 +133,7 @@ function FieldInput({ field }: { field: Field }) {
     return (
       <PostKindPicker
         value={field.value}
+        onKindChange={onKindChange}
         category={field.category}
         biz={field.biz}
         sector={field.sector}
@@ -196,6 +218,8 @@ export default function Workspace({
   }, []);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
+  const [postKind, setPostKind] = useState("해줘요");
+  const noticeRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
   const [region, setRegion] = useState("전체 지역");
@@ -261,9 +285,13 @@ export default function Workspace({
   }, [biz]);
   useEffect(() => {
     if (!toast) return;
+    if (modal || authOpen) {
+      noticeRef.current?.scrollIntoView({ block: "nearest" });
+      return;
+    }
     const timer = setTimeout(() => setToast(""), 4500);
     return () => clearTimeout(timer);
-  }, [toast]);
+  }, [toast, modal, authOpen]);
   useEffect(() => {
     const status = new URLSearchParams(window.location.search).get("auth");
     if (status === "confirmation-failed")
@@ -379,6 +407,13 @@ export default function Workspace({
       setAuthOpen(true);
       return;
     }
+    setPostKind(
+      existing?.communityPurpose === "introduction"
+        ? "업체 소개"
+        : existing
+          ? typeLabel(existing.type)
+          : "해줘요",
+    );
     setImages((existing?.images as string[]) || []);
     openForm(
       existing
@@ -3617,7 +3652,7 @@ export default function Workspace({
           </button>
         </div>
         {toast && (
-          <div role="status" className="dialog-notice">
+          <div ref={noticeRef} role="alert" className="dialog-notice">
             <span>{toast}</span>
             <button
               type="button"
@@ -3811,7 +3846,16 @@ export default function Workspace({
                   </label>
                 )}
               {modal.fields.map((f) => (
-                <FieldInput key={f.key} field={f} />
+                <FieldInput
+                  key={f.key}
+                  field={f}
+                  postKind={
+                    modal.fields.some((field) => field.key === "type")
+                      ? postKind
+                      : undefined
+                  }
+                  onKindChange={setPostKind}
+                />
               ))}
               {modal.button === "그냥 등록" && (
                 <>

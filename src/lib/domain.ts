@@ -308,13 +308,16 @@ export function act(
       );
       if (!["local", "online"].includes(serviceMode))
         throw new AppError("서비스 방식을 확인해주세요.");
-      const region =
-        serviceMode === "online"
+      const type = String(input.type || "request");
+      const noRegion =
+        type === "free" && (!input.region || input.region === "전체 지역");
+      const region = noRegion
+        ? "전체 지역"
+        : serviceMode === "online"
           ? onlineRegion
           : normalizeRegion(required(input.region, "지역", 80));
-      if (serviceMode === "local" && !validRegion(region))
+      if (!noRegion && serviceMode === "local" && !validRegion(region))
         throw new AppError("시/도를 선택하고 지역 조합을 확인해주세요.");
-      const type = String(input.type || "request");
       const category = normalizeCategory(
         type === "request"
           ? required(input.category, "카테고리", 80)

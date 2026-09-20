@@ -12,11 +12,13 @@ export default function PostKindPicker({
   category = "",
   biz = false,
   sector = "personal",
+  onKindChange,
 }: {
   value?: string;
   category?: string;
   biz?: boolean;
   sector?: string;
+  onKindChange?: (kind: string) => void;
 }) {
   const [communitySector, setSector] = useState(sector);
   const choices = biz
@@ -35,7 +37,10 @@ export default function PostKindPicker({
         <select
           name="type"
           value={kind}
-          onChange={(e) => setKind(e.target.value)}
+          onChange={(e) => {
+            setKind(e.target.value);
+            onKindChange?.(e.target.value);
+          }}
         >
           {[
             ...Object.values(postTypes),
@@ -49,7 +54,7 @@ export default function PostKindPicker({
           ))}
         </select>
       </label>
-      {!biz && (
+      {!biz && kind !== "자유" && (
         <label className="field">
           이야기 영역
           <select
@@ -58,7 +63,10 @@ export default function PostKindPicker({
             onChange={(e) => {
               setSector(e.target.value);
               setSelectedCategory("");
-              if (kind === "업체 소개") setKind("해줘요");
+              if (kind === "업체 소개") {
+                setKind("해줘요");
+                onKindChange?.("해줘요");
+              }
             }}
           >
             <option value="personal">생활·개인</option>
@@ -67,7 +75,10 @@ export default function PostKindPicker({
         </label>
       )}
       {kind === "자유" ? (
-        <input type="hidden" name="category" value="" />
+        <>
+          <input type="hidden" name="category" value="" />
+          <input type="hidden" name="communitySector" value={communitySector} />
+        </>
       ) : (
         <label className="field">
           {kind === "해줘요" ? "카테고리 *" : "카테고리 (선택)"}
