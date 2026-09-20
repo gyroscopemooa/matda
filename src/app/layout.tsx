@@ -11,9 +11,11 @@ export const metadata: Metadata = {
   description: homeDescription,
   verification: {
     google: process.env.GOOGLE_SITE_VERIFICATION,
-    other: process.env.NAVER_SITE_VERIFICATION
-      ? { "naver-site-verification": process.env.NAVER_SITE_VERIFICATION }
-      : {},
+    other: {
+      "naver-site-verification":
+        process.env.NAVER_SITE_VERIFICATION ||
+        "8c9731ee7a28d4761cb68b12e17e233eba83850c",
+    },
   },
   robots: { index: false, follow: false },
 };
