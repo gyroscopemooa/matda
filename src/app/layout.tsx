@@ -10,7 +10,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   description: homeDescription,
   verification: {
-    google: process.env.GOOGLE_SITE_VERIFICATION,
+    google:
+      process.env.GOOGLE_SITE_VERIFICATION ||
+      "7Txa9SR8IC6UywgCRgOoNTvflJ_cNlqXbVuj_ZwXtwU",
     other: {
       "naver-site-verification":
         process.env.NAVER_SITE_VERIFICATION ||
