@@ -3,11 +3,12 @@ import { cache } from "react";
 import { publishedGuides, type Guide } from "./guides";
 import { guideTopics, koreanDay, validateGuide } from "./guide-content";
 import { AppError } from "./types";
+import { serverSetting } from "./server-setting";
 
 function db(service = false) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = service
-    ? process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? serverSetting("SUPABASE_SERVICE_ROLE_KEY")
     : process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key)
     throw new AppError("가이드 DB 연결 설정이 필요합니다.", 503);
@@ -43,7 +44,7 @@ export const readGuides = cache(async (): Promise<Guide[]> => {
   ];
 });
 export async function generateDailyGuide() {
-  const key = process.env.OPENAI_API_KEY;
+  const key = serverSetting("OPENAI_API_KEY");
   if (!key) throw new AppError("OPENAI_API_KEY Secret을 설정해주세요.", 503);
   const client = db(true),
     day = koreanDay(),
@@ -72,7 +73,7 @@ export async function generateDailyGuide() {
       },
       signal: AbortSignal.timeout(90000),
       body: JSON.stringify({
-        model: process.env.OPENAI_GUIDE_MODEL || "gpt-4o-mini",
+        model: serverSetting("OPENAI_GUIDE_MODEL") || "gpt-4o-mini",
         store: false,
         max_output_tokens: 5000,
         instructions:

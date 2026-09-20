@@ -1,8 +1,9 @@
 import { timingSafeEqual } from "node:crypto";
 import { generateDailyGuide } from "@/lib/guide-server";
 import { AppError } from "@/lib/types";
+import { serverSetting } from "@/lib/server-setting";
 export async function POST(request: Request) {
-  const secret = process.env.GUIDE_CRON_SECRET;
+  const secret = serverSetting("GUIDE_CRON_SECRET");
   const expected = Buffer.from(`Bearer ${secret || ""}`),
     actual = Buffer.from(request.headers.get("authorization") || "");
   if (
