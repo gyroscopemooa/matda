@@ -36,3 +36,13 @@
 원격 `post.create` 견적 동시 생성, 업체 제출·선택·거래 RPC는 아직 연결되지 않았다. 현재 시점에 운영 환경의 `NEXT_PUBLIC_RELEASE_PHASE`를 2로 변경하면 안 된다.
 
 다음은 **2B 원격 업체 역할·견적 제출**. Phase 3 업체찾기를 공개하지 않고도 Phase 2에서 업체 역할과 템플릿을 사용할 수 있도록 권한 구분부터 수정한다.
+
+## 운영 공개 확인 및 push 규칙 (2026-09-20)
+
+사용자가 견적이 열렸을 경우 닫는 수정의 커밋·push를 허용했다. 실제 `https://matda.net/quotes`는 브라우저에서 준비 중 화면, `/quotes/new`와 `/biz/rfqs`는 HTTP 404, `/providers`는 준비 중, `/api/app`은 HTTP 200·Supabase 모드·견적 활성 글 0개로 확인했다. 화면·API·저장소 배포 설정이 Phase 1 유지와 일치하므로 닫기 위한 코드 수정이나 재배포는 필요하지 않았다.
+향후 매 push 전 확인과 승인 범위는 루트 AGENTS.md 및 .cursor/rules/release-and-push.mdc에 저장한다. 이 확인은 로그인하지 않은 공개 경로 기준이며 관리자 배포 이력이나 인증된 전체 기능 테스트를 대체하지 않는다.
+
+## 로컬 테스트와 운영 공개 분리
+
+사용자 요청에 따라 `npm run dev`/`npm run preview`는 로컬 어댑터와 개발 Phase 8을 강제하고 구현된 견적·업체·BIZ·RFQ·입찰 화면을 연다. `.env.local`의 운영 값이 로컬 실행에 섞이지 않도록 서비스 주소·기능 플래그를 실행 프로세스에서 지정한다. 실제 결제는 비활성이다. 운영 Phase 1 재현은 `npm run preview:release`로 분리했다.
+3107 로컬 서버 재시작 후 API 로컬 모드·업체/BIZ/RFQ/입찰 경로 200·준비 중 없음, PC/모바일 견적 전환 E2E 2개, 타입검사·린트 통과. Cloudflare 설정과 원격 서비스에는 변경이 없다.

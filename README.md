@@ -16,6 +16,8 @@ npm run preview
 
 브라우저에서 http://127.0.0.1:3107 을 엽니다. 미리보기 데이터는 `.local/preview/`에 저장되고 서버를 다시 시작해도 유지됩니다. 예시 글 5개에는 예시 표시가 있습니다. 직접 가입한 테스트 회원으로 글을 등록하면 실제 로컬 저장·채팅·견적을 체험할 수 있습니다.
 
+로컬 `npm run preview`(3107)와 `npm run dev`(3000)는 구현된 견적·업체·기업·입찰 기능을 준비 중 표시 없이 열어둡니다. `.env.local`에 Supabase/Phase 1 값이 있어도 이 두 명령은 로컬 저장소와 개발 Phase 8을 사용합니다. dev 데이터는 `.local/dev/`, preview 데이터는 기존 `.local/preview/`에 저장하며 운영 계정/게시물과 분리됩니다. 실제 결제는 비활성입니다. 운영과 같은 Phase 1 화면 확인은 preview 서버를 중지한 뒤 `npm run preview:release`로 실행하세요. Cloudflare 배포 설정은 Phase 1 그대로입니다.
+
 일반 회원과 업체 회원을 별도 브라우저 프로필에서 가입하면 양측 거래 흐름을 확인할 수 있습니다. 한 계정에서도 MY의 `업체 기능도 사용하기`, `기업 등록`을 통해 역할을 확장할 수 있습니다.
 
 ## 화면
@@ -86,7 +88,7 @@ npm run preview
 - 3: 업체찾기 추가
 - 4 이상: 기업서비스 추가
 
-`.env.local`에 `NEXT_PUBLIC_RELEASE_PHASE=2` 등으로 설정하고 개발 서버를 재시작합니다. production에서는 NEXT_PUBLIC 값이 빌드에 고정되므로 다시 빌드해야 합니다. 개별 기능 플래그가 false이면 해당 Phase에서도 비활성입니다. 실제 결제/외부 연결 정책은 그대로 유지됩니다.
-`npm test`와 `npm run dev:test`는 후속 기능 회귀를 위해 별도 프로세스에서 Phase 8을 사용합니다. 기본 미리보기의 Phase 1 설정을 변경하지 않습니다. 미리보기 실행 중 `node scripts/check-phase1.mjs`로 PC/모바일 메뉴·MY·글쓰기·직접 주소 차단을 확인할 수 있습니다.
+운영 공개 Phase는 Cloudflare 빌드 설정과 `wrangler.jsonc`에서 관리하며 현재는 1을 유지합니다. production에서는 NEXT_PUBLIC 값이 빌드에 고정되므로 승인된 공개 범위 변경 시 다시 빌드해야 합니다. 로컬 dev/preview는 개발용 Phase 8, preview:release는 공개 재현용 Phase 1을 명시적으로 사용합니다. 실제 결제/외부 연결 정책은 그대로 유지됩니다.
+`npm test`와 `npm run dev:test`는 후속 기능 회귀를 위해 별도 프로세스에서 Phase 8을 사용합니다. `npm run preview:release` 실행 중 `node scripts/check-phase1.mjs`로 PC/모바일 메뉴·MY·글쓰기·직접 주소 차단을 확인할 수 있습니다.
 
 지역 설정: 상단 지역 버튼에서 커뮤니티 범위를 선택합니다. 글쓰기는 시/도와 시/군/구를 고르고 동은 생략할 수 있습니다. MY에서 기본 지역 설정도 가능합니다. 신규 계정에 지역을 임의 지정하지 않습니다. 데이터 출처/기준일/갱신: docs/REGIONS.md.

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1",
+    "dev": "node scripts/dev-preview.mjs --port 3000",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
@@ -14,6 +14,7 @@
     "lint": "eslint src tests scripts docs/local-admin.ts next.config.ts playwright.config.ts",
     "format": "prettier --write src tests scripts next.config.ts playwright.config.ts eslint.config.mjs",
     "preview": "node scripts/dev-preview.mjs",
+    "preview:release": "node scripts/dev-preview.mjs --release-preview",
     "check:remote": "node --env-file-if-exists=.env.local scripts/check-remote.mjs",
     "cf:build": "node scripts/build-cloudflare.mjs",
     "cf:preview": "opennextjs-cloudflare preview",

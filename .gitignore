@@ -8,6 +8,7 @@ playwright-report/
 *.tsbuildinfo
 
 .next-e2e/
+.next-preview/
 .next-build/
 .next-cloudflare/
 .vercel/
