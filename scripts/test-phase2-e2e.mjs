@@ -6,6 +6,7 @@ const result = spawnSync(
     "test",
     "tests/consumer-quotes.e2e.ts",
     "tests/quote-conversion.e2e.ts",
+    "tests/proposals.e2e.ts",
   ],
   {
     stdio: "inherit",

@@ -45,6 +45,12 @@ function checkedQuote<T>(result: {
         "마감되었거나 종료된 견적 요청입니다.",
         400,
       ],
+      [
+        /Final fixed quote required/,
+        "확정 견적을 받은 뒤 업체를 선택해주세요.",
+        400,
+      ],
+      [/Sharing consent required/, "참여 업체 공유에 동의해주세요.", 400],
       [/already selected/, "이미 업체를 선택한 요청입니다.", 400],
       [/trade confirmation/, "실제 거래 확인 후 후기를 작성해주세요.", 400],
       [/Duplicate|duplicate key/i, "이미 등록한 요청 또는 후기입니다.", 400],
@@ -130,7 +136,13 @@ export async function loadCommunity(
           "blocks",
           "reports",
           ...(flags.quotes
-            ? ["quotes", "quote_templates", "selections", "trade_confirmations"]
+            ? [
+                "quotes",
+                "quote_templates",
+                "selections",
+                "trade_confirmations",
+                "quote_questions",
+              ]
             : []),
         ]
       : []),
@@ -254,11 +266,20 @@ export async function loadCommunity(
       portfolio: Array.isArray(p.portfolio) ? p.portfolio.join("\n") : "",
       contact: contacts.find((c) => c.user_id === p.user_id)?.phone,
     });
+  for (const q of lists.quote_questions || [])
+    rows.push({
+      ...row("quoteQuestion", q, String(q.provider_id)),
+      postId: requestPosts.get(q.request_id),
+      questionKey: q.question_key,
+      answeredAt: q.answered_at,
+    });
   for (const q of lists.quotes || [])
     rows.push({
       ...row("quote", q, String(q.provider_id)),
       postId: requestPosts.get(q.request_id),
-      amount: Number(q.amount),
+      amount: q.amount == null ? null : Number(q.amount),
+      proposalType: q.proposal_type || "fixed",
+      amountMax: q.amount_max == null ? null : Number(q.amount_max),
       providerName:
         lists.provider_profiles?.find((p) => p.user_id === q.provider_id)
           ?.name ||
@@ -266,10 +287,15 @@ export async function loadCommunity(
         "업체",
       availableDate: q.available_date || "",
       ...Object.fromEntries(
-        ["scope", "duration", "extraCost"].map((key) => [
-          key,
-          (q.scope as RecordRow)?.[key] || "",
-        ]),
+        [
+          "scope",
+          "duration",
+          "extraCost",
+          "priceCondition",
+          "inspectionReason",
+          "visitFee",
+          "visitSlots",
+        ].map((key) => [key, (q.scope as RecordRow)?.[key] ?? ""]),
       ),
       viewedAt: q.viewed_at,
     });
@@ -392,6 +418,8 @@ export async function communityAction(
       "provider.save",
       "template.save",
       "quote.submit",
+      "quote.question",
+      "quote.answer",
       "quote.select",
       "quote.chat",
       "quote.viewed",
@@ -407,10 +435,15 @@ export async function communityAction(
     if (action !== "quote.chat")
       act(structuredClone(db), { ...user }, action, input);
     return checkedQuote(
-      await client.rpc("consumer_quote_action", {
-        operation: action,
-        payload: input,
-      }),
+      await client.rpc(
+        ["quote.question", "quote.answer"].includes(action)
+          ? "consumer_quote_question_action"
+          : "consumer_quote_action",
+        {
+          operation: action,
+          payload: input,
+        },
+      ),
     );
   }
   if (["quote.enable", "quote.expand", "quote.extend"].includes(action)) {

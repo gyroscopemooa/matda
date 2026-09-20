@@ -52,3 +52,6 @@ where key='quote_require_acceptance';
 staging 검증 기록을 남긴 뒤 사용자의 운영 공개 결정을 받는다. 공개 승인 없이 main push/운영 SQL/Worker 변수 변경을 진행하지 않는다.
 문제가 있으면 DB consumer_quotes_enabled=false로 신규 견적 작업을 차단하고 운영 빌드를 Phase 1로 되돌린다. 커뮤니티 글·견적·후기는 삭제하지 않는다. DB 구조를 삭제하는 rollback은 사용하지 않는다.
 운영 push 전 AGENTS.md의 커밋·공개 설정·실제 화면/API 확인 규칙을 따른다. 실제 배포 확인 전에는 출시 완료로 보고하지 않는다.
+
+## 제안 흐름 추가 적용
+0017 다음 0018_proposals_and_shared_questions.sql을 적용한다. 확정/예상/확인 후 가격 및 선택 제한, 참여 업체 공통 질문 RLS와 공유 동의, 모집기간 종료 후 기존 제안 최종 수정도 검증한다. 롤백은 Phase 1로 닫고, null 금액이 생기므로 이전 Phase 2 코드로 바로 되돌리지 않는다. 상세: PROPOSAL_WORKFLOW.md.

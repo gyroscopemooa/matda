@@ -83,21 +83,21 @@ for (const width of [1440, 390])
       });
       await sp.goto(`/posts/${post.id}`);
       await sp
-        .getByRole("button", { name: "견적 보내기 / 수정", exact: true })
+        .getByRole("button", { name: "제안 보내기 / 수정", exact: true })
         .click();
       await expect(sp.getByLabel("견적 금액 (원)")).toHaveValue("150000");
       await expect(sp.getByLabel("예상시간 (선택)")).toHaveValue("3일");
       await sp.getByLabel("한줄 설명").fill("시안 두 개 포함 견적");
-      await sp.getByRole("button", { name: "저장하기", exact: true }).click();
+      await sp.getByRole("button", { name: "제안 보내기", exact: true }).click();
       await expect(sp.getByText("150,000원", { exact: true })).toBeVisible();
       await sp
-        .getByRole("button", { name: "견적 보내기 / 수정", exact: true })
+        .getByRole("button", { name: "제안 보내기 / 수정", exact: true })
         .click();
       await expect(sp.getByLabel("한줄 설명")).toHaveValue(
         "시안 두 개 포함 견적",
       );
       await sp.getByLabel("견적 금액 (원)").fill("160000");
-      await sp.getByRole("button", { name: "저장하기", exact: true }).click();
+      await sp.getByRole("button", { name: "제안 보내기", exact: true }).click();
       await expect(sp.getByText("160,000원", { exact: true })).toBeVisible();
       await sp.locator('.quote-card input[type="file"]').setInputFiles({
         name: "견적서.pdf",
@@ -144,7 +144,7 @@ for (const width of [1440, 390])
         has: bp.getByRole("heading", { name: "첫 업체", exact: true }),
       });
       await first
-        .getByRole("button", { name: "이 견적으로 채팅", exact: true })
+        .getByRole("button", { name: "상담하기", exact: true })
         .click();
       await expect(bp).toHaveURL(/\/chat\//);
       await bp
@@ -173,7 +173,7 @@ for (const width of [1440, 390])
         .click();
       await sp.reload();
       await expect(
-        sp.getByRole("button", { name: "견적 보내기 / 수정", exact: true }),
+        sp.getByRole("button", { name: "제안 보내기 / 수정", exact: true }),
       ).toBeDisabled();
       await expect(sp.locator('.quote-card input[type="file"]')).toHaveCount(0);
       await sp

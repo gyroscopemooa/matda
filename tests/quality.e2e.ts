@@ -146,12 +146,12 @@ test("Saved template reuse, two-quote comparison and provider portfolio upload",
     });
     const page = await seller.newPage();
     await page.goto("/posts/" + post.id);
-    await page.getByRole("button", { name: "견적 보내기 / 수정" }).click();
+    await page.getByRole("button", { name: "제안 보내기 / 수정" }).click();
     await page
       .getByLabel("저장한 템플릿")
       .selectOption({ label: "사무실 기본" });
     await expect(page.getByLabel("한줄 설명")).toHaveValue("저장한 기본 견적");
-    await page.getByRole("button", { name: "저장하기", exact: true }).click();
+    await page.getByRole("button", { name: "제안 보내기", exact: true }).click();
     await expect(page.getByText("123,000원")).toBeVisible();
     await action(second.request, "quote.submit", {
       postId: post.id,

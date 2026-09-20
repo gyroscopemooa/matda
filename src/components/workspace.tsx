@@ -9,6 +9,12 @@ import {
 import Link from "next/link";
 import ProfileAvatar, { Avatar } from "./profile-avatar";
 import RotatingBrand from "./rotating-brand";
+import ProposalFields from "./proposal-fields";
+import {
+  proposalLabels,
+  proposalPrice,
+  type ProposalType,
+} from "@/lib/proposals";
 import GuideAdmin from "./guide-admin";
 import GuideLibrary from "./guide-library";
 import { publishedGuides, type Guide } from "@/lib/guides";
@@ -237,6 +243,7 @@ export default function Workspace({
       ? [...categories, ...businessCategories]
       : categories;
   const [type, setType] = useState("전체");
+  const [proposalInitial, setProposalInitial] = useState<Row | undefined>();
   const [modal, setModal] = useState<null | {
     title: string;
     fields: Field[];
@@ -1098,48 +1105,22 @@ export default function Workspace({
       </>
     );
   }
-  function quoteForm(post: Row) {
+  function quoteForm(post: Row, final = false) {
     const existing = own("quote").find((q) => q.postId === post.id);
     const template = existing || own("template")[0];
     openForm(
-      "우리 업체의 견적 보내기",
-      [
-        {
-          key: "amount",
-          label: "견적 금액 (원)",
-          type: "number",
-          required: true,
-          value: str(template?.amount),
-        },
-        {
-          key: "message",
-          label: "한줄 설명",
-          required: true,
-          value: str(template?.message),
-        },
-        {
-          key: "availableDate",
-          label: "가능일 (선택)",
-          type: "date",
-          value: str(existing?.availableDate),
-        },
-        { key: "scope", label: "포함범위 (선택)", value: str(template?.scope) },
-        {
-          key: "duration",
-          label: "예상시간 (선택)",
-          value: str(template?.duration),
-        },
-        {
-          key: "extraCost",
-          label: "추가비용 조건 (선택)",
-          value: str(template?.extraCost),
-        },
-      ],
+      "우리 업체의 제안 보내기",
+      [],
       async (v) => {
         await action("quote.submit", { ...v, postId: post.id });
       },
+      "제안 보내기",
+    );
+    setProposalInitial(
+      final && template ? { ...template, proposalType: "fixed" } : template,
     );
   }
+
   function detail(post: Row) {
     const quotes = rows.filter(
       (r) => r.kind === "quote" && r.postId === post.id,
@@ -1150,6 +1131,10 @@ export default function Workspace({
       post.remoteQuoteState !== "selected" &&
       post.status === "published" &&
       Date.parse(str(post.expiresAt)) > Date.now();
+    const discussionOpen =
+      !post.selectedQuoteId &&
+      post.remoteQuoteState !== "selected" &&
+      post.status === "published";
     const providerInfo = (q: Row) => {
       const profile = rows.find(
         (p) => p.kind === "provider" && p.ownerId === q.ownerId,
@@ -1379,7 +1364,11 @@ export default function Workspace({
         {flags.quotes && !!post.quoteEnabled && (
           <section className="panel">
             <h2>
-              도착한 견적{" "}
+              {isOwner
+                ? "도착한 제안"
+                : quotes.length
+                  ? "내가 보낸 제안"
+                  : "제안 모집 현황"}{" "}
               <span className="count">{Number(post.quoteCount || 0)}</span>
             </h2>
             <p className="muted">
@@ -1424,14 +1413,109 @@ export default function Workspace({
               <button
                 className="primary"
                 disabled={
-                  !accepting ||
+                  (!accepting &&
+                    !(
+                      quotes.some((q) => q.ownerId === user.id) &&
+                      !post.selectedQuoteId &&
+                      post.remoteQuoteState !== "selected" &&
+                      post.status === "published"
+                    )) ||
                   (Number(post.quoteCount) >= Number(post.quoteLimit) &&
                     !quotes.some((q) => q.ownerId === user.id))
                 }
                 onClick={() => quoteForm(post)}
               >
-                견적 보내기 / 수정
+                제안 보내기 / 수정
               </button>
+            )}
+            {!isOwner && user?.role === "customer" && accepting && (
+              <button
+                onClick={() =>
+                  run(
+                    () => action("profile.enableProvider"),
+                    "업체 기능을 활성화했어요. 이제 제안을 보낼 수 있습니다.",
+                  )
+                }
+              >
+                업체로 참여하기
+              </button>
+            )}
+            {quotes.some((q) => q.ownerId === user?.id) && discussionOpen && (
+              <button
+                onClick={() =>
+                  openForm(
+                    "공통 추가정보 요청",
+                    [
+                      {
+                        key: "question",
+                        label: "다른 업체도 필요한 질문 (최대 200자)",
+                        required: true,
+                      },
+                    ],
+                    async (v) => {
+                      await action("quote.question", { postId: post.id, ...v });
+                    },
+                    "추가정보 요청",
+                  )
+                }
+              >
+                추가정보 요청
+              </button>
+            )}
+            {(isOwner || quotes.some((q) => q.ownerId === user?.id)) && (
+              <section className="panel">
+                <h3>요청 공통 추가정보</h3>
+                <p className="muted">
+                  요청자와 제안 참여 업체에게 공유됩니다. 기존 답변을 먼저
+                  확인해주세요. 연락처·상세 주소·개별 협상은 채팅으로 보내세요.
+                </p>
+                {rows
+                  .filter(
+                    (r) => r.kind === "quoteQuestion" && r.postId === post.id,
+                  )
+                  .map((question) => (
+                    <div className="list-row" key={question.id}>
+                      <div>
+                        <b>{str(question.question)}</b>
+                        <p>{str(question.answer) || "요청자 답변 대기"}</p>
+                      </div>
+                      {isOwner && discussionOpen && (
+                        <button
+                          onClick={() =>
+                            openForm(
+                              "공통 정보 답변",
+                              [
+                                {
+                                  key: "answer",
+                                  label: "참여 업체에게 공유할 답변",
+                                  required: true,
+                                  value: str(question.answer),
+                                },
+                                {
+                                  key: "shareConsent",
+                                  label: "제안 참여 업체에게 공유",
+                                  options: ["선택해주세요", "공유 동의"],
+                                },
+                              ],
+                              async (v) => {
+                                await action("quote.answer", {
+                                  id: question.id,
+                                  ...v,
+                                });
+                              },
+                              "답변 공유",
+                            )
+                          }
+                        >
+                          {question.answer ? "답변 수정" : "한 번에 답변"}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                {!rows.some(
+                  (r) => r.kind === "quoteQuestion" && r.postId === post.id,
+                ) && <p>추가정보 요청이 없습니다.</p>}
+              </section>
             )}
             <div className="quote-grid">
               {quotes.map((q) => (
@@ -1444,7 +1528,27 @@ export default function Workspace({
                       ? "사업자 확인 완료"
                       : "사업자 미확인"}
                   </p>
-                  <strong className="price">{currency(q.amount)}</strong>
+                  <span className="badge">
+                    {
+                      proposalLabels[
+                        (q.proposalType || "fixed") as ProposalType
+                      ]
+                    }
+                  </span>
+                  <strong className="price">{proposalPrice(q)}</strong>
+                  {q.proposalType === "estimate" && (
+                    <p>가격 변동 조건: {str(q.priceCondition)}</p>
+                  )}
+                  {q.proposalType === "inspection" && (
+                    <p>
+                      확인할 사항: {str(q.inspectionReason)}
+                      <br />
+                      가능 일정: {str(q.visitSlots)}
+                      <br />
+                      상담·방문비:{" "}
+                      {Number(q.visitFee) === 0 ? "무료" : currency(q.visitFee)}
+                    </p>
+                  )}
                   <label className="compare-check">
                     <input
                       type="checkbox"
@@ -1471,6 +1575,23 @@ export default function Workspace({
                     <dd>{str(q.extraCost) || "별도 문의"}</dd>
                   </dl>
                   {privateFiles(q)}
+                  {q.ownerId === user?.id &&
+                    !!q.proposalType &&
+                    q.proposalType !== "fixed" &&
+                    !post.selectedQuoteId &&
+                    post.remoteQuoteState !== "selected" &&
+                    post.status === "published" && (
+                      <button onClick={() => quoteForm(post, true)}>
+                        최종 견적 보내기
+                      </button>
+                    )}
+                  {isOwner &&
+                    !!q.proposalType &&
+                    q.proposalType !== "fixed" && (
+                      <p className="muted">
+                        상담 후 확정 견적을 받으면 업체를 선택할 수 있어요.
+                      </p>
+                    )}
                   {(isOwner || q.ownerId === user?.id) && (
                     <button
                       onClick={() =>
@@ -1482,7 +1603,7 @@ export default function Workspace({
                         }, "")
                       }
                     >
-                      이 견적으로 채팅
+                      상담하기
                     </button>
                   )}
                   {isOwner && post.selectedQuoteId === q.id && (
@@ -1492,18 +1613,20 @@ export default function Workspace({
                         : "연락처는 선택·수락 정책에 따라 공개됩니다. 내부 채팅으로도 협의할 수 있어요."}
                     </p>
                   )}
-                  {isOwner && !post.selectedQuoteId && (
-                    <button
-                      onClick={() =>
-                        run(
-                          () => action("quote.select", { id: q.id }),
-                          "업체를 선택했어요. 실제 거래완료는 별도로 확인해주세요.",
-                        )
-                      }
-                    >
-                      이 업체 선택
-                    </button>
-                  )}
+                  {isOwner &&
+                    !post.selectedQuoteId &&
+                    (!q.proposalType || q.proposalType === "fixed") && (
+                      <button
+                        onClick={() =>
+                          run(
+                            () => action("quote.select", { id: q.id }),
+                            "업체를 선택했어요. 실제 거래완료는 별도로 확인해주세요.",
+                          )
+                        }
+                      >
+                        이 업체 선택
+                      </button>
+                    )}
                   {post.selectedQuoteId === q.id && (
                     <span className="success">
                       <Check size={16} />
@@ -1533,7 +1656,14 @@ export default function Workspace({
                       .map((q) => (
                         <tr key={q.id}>
                           <th>{str(q.providerName)}</th>
-                          <td>{currency(q.amount)}</td>
+                          <td>
+                            {
+                              proposalLabels[
+                                (q.proposalType || "fixed") as ProposalType
+                              ]
+                            }{" "}
+                            · {proposalPrice(q)}
+                          </td>
                           <td>{str(q.availableDate) || "협의"}</td>
                           <td>{str(q.scope) || "협의"}</td>
                           <td>
@@ -1556,8 +1686,10 @@ export default function Workspace({
             )}
             {!quotes.length &&
               empty(
-                "아직 확인할 견적이 없어요",
-                "견적은 요청자와 작성 업체만 확인할 수 있어요.",
+                isOwner
+                  ? "아직 도착한 제안이 없어요"
+                  : "제안 내용은 비공개입니다",
+                "제안은 요청자와 제출 업체만 확인할 수 있어요.",
               )}
             {!!post.selectedQuoteId &&
               (isOwner || post.selectedProviderId === user?.id) && (
@@ -4062,7 +4194,7 @@ export default function Workspace({
                 }, modal.successMessage || "저장했어요.");
               }}
             >
-              {modal.title === "우리 업체의 견적 보내기" &&
+              {modal.title === "우리 업체의 제안 보내기" &&
                 own("template").length > 0 && (
                   <label className="field">
                     저장한 템플릿
@@ -4096,6 +4228,9 @@ export default function Workspace({
                     </select>
                   </label>
                 )}
+              {modal.title === "우리 업체의 제안 보내기" && (
+                <ProposalFields initial={proposalInitial} />
+              )}
               {modal.fields.map((f) => (
                 <FieldInput
                   key={f.key}

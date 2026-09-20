@@ -1,3 +1,4 @@
+import { proposalTerms } from "./proposals";
 import { parseSchedule } from "./schedule";
 import { normalizeRegion, validRegion } from "./regions";
 import { randomUUID } from "node:crypto";
@@ -113,6 +114,25 @@ export function canRead(
   if (row.kind === "comment") {
     const parent = db.rows.find((r) => r.id === row.postId);
     return !!parent && canRead(db, parent, user, now);
+  }
+  if (row.kind === "quoteQuestion") {
+    const post = db.rows.find((r) => r.id === row.postId && r.kind === "post");
+    return (
+      !!user &&
+      !user.disabled &&
+      !!post &&
+      !db.rows.some(
+        (r) =>
+          r.kind === "block" &&
+          ((r.ownerId === user.id && r.targetId === post.ownerId) ||
+            (r.ownerId === post.ownerId && r.targetId === user.id)),
+      ) &&
+      (post.ownerId === user.id ||
+        db.rows.some(
+          (q) =>
+            q.kind === "quote" && q.postId === post.id && q.ownerId === user.id,
+        ))
+    );
   }
   if (row.kind === "quote") {
     const post = db.rows.find((r) => r.id === row.postId);
@@ -738,7 +758,20 @@ export function act(
       const post = find(db, input.postId, "post");
       if (post.ownerId === user.id)
         throw new AppError("본인 요청에 견적을 낼 수 없습니다.");
-      if (!active(post, now)) throw new AppError("견적 모집이 마감되었습니다.");
+      const prior = db.rows.find(
+        (r) =>
+          r.kind === "quote" && r.postId === post.id && r.ownerId === user.id,
+      );
+      if (
+        !active(post, now) &&
+        !(
+          prior &&
+          post.quoteEnabled &&
+          post.status === "published" &&
+          !post.selectedQuoteId
+        )
+      )
+        throw new AppError("견적 모집이 마감되었습니다.");
       if (
         post.sample ||
         db.users.find((u) => u.id === post.ownerId)?.disabled ||
@@ -761,7 +794,7 @@ export function act(
         throw new AppError("견적 모집 한도에 도달했습니다.");
       const data = {
         postId: post.id,
-        amount: money(input.amount),
+        ...proposalTerms(input),
         message: required(input.message, "한줄 설명", 1000),
         availableDate: input.availableDate || "",
         scope: String(input.scope || ""),
@@ -772,10 +805,87 @@ export function act(
             ?.name || user.name,
         currency: "KRW",
       };
-      const row = old ? update(old, data) : add(db, user, "quote", data, now);
+      const row = old
+        ? update(old, { ...data, viewedAt: null })
+        : add(db, user, "quote", data, now);
       notify(post.ownerId, "새 견적이 도착했어요.", post.id);
       emit("quote_received", row.id);
       return row;
+    }
+    case "quote.question": {
+      provider(user);
+      const post = find(db, input.postId, "post");
+      if (
+        !post.quoteEnabled ||
+        post.status !== "published" ||
+        !!post.selectedQuoteId ||
+        !db.rows.some(
+          (q) =>
+            q.kind === "quote" && q.postId === post.id && q.ownerId === user.id,
+        )
+      )
+        throw new AppError(
+          "진행 중인 요청에 제안한 업체만 질문할 수 있어요.",
+          403,
+        );
+      if (
+        !canRead(db, { ...post, kind: "quoteQuestion", postId: post.id }, user)
+      )
+        throw new AppError("접근 권한이 없습니다.", 403);
+      const question = required(input.question, "공통 질문", 200);
+      const key = question.replace(/\s/g, "").toLowerCase();
+      const existing = db.rows.find(
+        (r) =>
+          r.kind === "quoteQuestion" &&
+          r.postId === post.id &&
+          r.questionKey === key,
+      );
+      if (existing) return existing;
+      if (
+        db.rows.filter(
+          (r) => r.kind === "quoteQuestion" && r.postId === post.id,
+        ).length >= 20
+      )
+        throw new AppError("공통 질문은 요청당 20개까지 가능합니다.");
+      const row = add(
+        db,
+        user,
+        "quoteQuestion",
+        { postId: post.id, question, questionKey: key, answer: "" },
+        now,
+      );
+      notify(post.ownerId, "업체가 추가정보를 요청했어요.", post.id);
+      return row;
+    }
+    case "quote.answer": {
+      const question = get("quoteQuestion");
+      const post = find(db, question.postId, "post");
+      owned(post, user);
+      if (
+        !post.quoteEnabled ||
+        post.status !== "published" ||
+        post.selectedQuoteId
+      )
+        throw new AppError("진행 중인 요청만 답변할 수 있어요.");
+      if (input.shareConsent !== true && input.shareConsent !== "공유 동의")
+        throw new AppError("참여 업체 공유에 동의해주세요.");
+      const answer = required(input.answer, "공통 답변", 2000);
+      const updated = update(question, {
+        answer,
+        answeredAt: new Date(now).toISOString(),
+      });
+      for (const q of db.rows.filter(
+        (r) => r.kind === "quote" && r.postId === post.id,
+      ))
+        if (
+          canRead(
+            db,
+            question,
+            db.users.find((u) => u.id === q.ownerId),
+          )
+        )
+          notify(q.ownerId, "요청에 공통 답변이 추가됐어요.", post.id);
+      return updated;
     }
     case "quote.expand": {
       const post = get("post");
@@ -812,6 +922,8 @@ export function act(
     }
     case "quote.select": {
       const quote = get("quote");
+      if (quote.proposalType && quote.proposalType !== "fixed")
+        throw new AppError("확정 견적을 받은 뒤 업체를 선택해주세요.");
       const post = find(db, quote.postId, "post");
       owned(post, user);
       if (

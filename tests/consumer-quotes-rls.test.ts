@@ -54,6 +54,7 @@ test("Phase 2 PostgreSQL: role, atomic request, quote caps/privacy, chat, privat
       "0015_quote_request_conversion",
       "0016_consumer_quote_workflow",
       "0017_quote_documents",
+      "0018_proposals_and_shared_questions",
     ])
       await sql(name);
     for (const id of [buyer, ...sellers, outsider]) {
@@ -140,6 +141,142 @@ test("Phase 2 PostgreSQL: role, atomic request, quote caps/privacy, chat, privat
       ).id,
       quoteIds[0],
     );
+
+    // Structured proposals keep unknown prices null, permit only final selection,
+    // and share one answer only with proposal participants.
+    const questionRpc = async (
+      operation: string,
+      payload: Record<string, unknown>,
+    ) =>
+      (
+        await db.query<{ result: { id: string } }>(
+          "select consumer_quote_question_action($1,$2::jsonb) result",
+          [operation, JSON.stringify(payload)],
+        )
+      ).rows[0].result;
+    await rpc("quote.submit", {
+      postId: post.id,
+      proposalType: "inspection",
+      message: "사진 확인 후",
+      inspectionReason: "엘리베이터 여부",
+      visitSlots: "내일 오후",
+      visitFee: 0,
+    });
+    assert.equal(
+      (
+        await db.query<{ amount: unknown }>(
+          "select amount from quotes where id=$1",
+          [quoteIds[0]],
+        )
+      ).rows[0].amount,
+      null,
+    );
+    await as(buyer);
+    await assert.rejects(
+      rpc("quote.select", { id: quoteIds[0] }),
+      /fixed quote/,
+    );
+    await as(sellers[0]);
+    const question = await questionRpc("quote.question", {
+      postId: post.id,
+      question: "엘리베이터 있나요?",
+    });
+    await as(sellers[1]);
+    assert.equal(
+      (
+        await questionRpc("quote.question", {
+          postId: post.id,
+          question: "엘리베이터  있나요?",
+        })
+      ).id,
+      question.id,
+    );
+    await assert.rejects(
+      questionRpc("quote.answer", {
+        id: question.id,
+        answer: "위조",
+        shareConsent: true,
+      }),
+      /owner/,
+    );
+    await as(outsider);
+    assert.equal(
+      (await db.query("select * from quote_questions")).rows.length,
+      0,
+    );
+    await assert.rejects(
+      questionRpc("quote.question", { postId: post.id, question: "무단 질문" }),
+      /participant/,
+    );
+    await as(buyer);
+    await assert.rejects(
+      questionRpc("quote.answer", { id: question.id, answer: "있음" }),
+      /consent/,
+    );
+    await questionRpc("quote.answer", {
+      id: question.id,
+      answer: "엘리베이터 있음",
+      shareConsent: true,
+    });
+    await as(sellers[1]);
+    assert.equal(
+      (await db.query<{ answer: string }>("select answer from quote_questions"))
+        .rows[0].answer,
+      "엘리베이터 있음",
+    );
+    await as(sellers[0]);
+    await assert.rejects(
+      rpc("quote.submit", {
+        postId: post.id,
+        proposalType: "estimate",
+        amount: 200,
+        amountMax: 100,
+        priceCondition: "면적",
+        message: "예상",
+      }),
+      /range/,
+    );
+    await rpc("quote.submit", {
+      postId: post.id,
+      proposalType: "estimate",
+      amount: 110000,
+      amountMax: 150000,
+      priceCondition: "면적에 따라",
+      message: "예상",
+    });
+    await as(buyer);
+    await assert.rejects(
+      rpc("quote.select", { id: quoteIds[0] }),
+      /fixed quote/,
+    );
+    // An existing provider may finalize after the recruitment deadline.
+    await db.exec("reset role");
+    await db.query(
+      "update quote_requests set expires_at=now()-interval '1 hour' where id=$1",
+      [request],
+    );
+    await as(sellers[0]);
+    await rpc("quote.submit", {
+      postId: post.id,
+      proposalType: "fixed",
+      amount: 110000,
+      message: "최종 견적",
+    });
+    await as(sellers[5]);
+    await assert.rejects(
+      rpc("quote.submit", {
+        postId: post.id,
+        amount: 100,
+        message: "마감 후 신규",
+      }),
+      /closed/,
+    );
+    await db.exec("reset role");
+    await db.query(
+      "update quote_requests set expires_at=now()+interval '2 days' where id=$1",
+      [request],
+    );
+    await as(sellers[0]);
     const fileId = randomUUID(),
       key = `${sellers[0]}/${quoteIds[0]}/${fileId}`;
     await db.query(

@@ -56,7 +56,7 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole("dialog")).not.toBeVisible();
     await expect(page).toHaveURL(new RegExp(`/posts/${post.id}$`));
     await expect(
-      page.getByRole("heading", { name: /도착한 견적/ }),
+      page.getByRole("heading", { name: /^도착한 제안/, level: 2 }),
     ).toBeVisible();
     await expect(
       page.getByText("전환 전 댓글을 보존합니다", { exact: true }),
@@ -66,7 +66,7 @@ for (const width of [1440, 390]) {
     ).toHaveCount(0);
     await page.reload();
     await expect(
-      page.getByRole("heading", { name: /도착한 견적/ }),
+      page.getByRole("heading", { name: /^도착한 제안/, level: 2 }),
     ).toBeVisible();
     expect(
       await page.evaluate(
