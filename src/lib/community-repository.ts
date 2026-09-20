@@ -135,7 +135,7 @@ export async function loadCommunity(
   for (const p of lists.posts) {
     const schedule = (p.schedule || {}) as RecordRow;
     rows.push({
-      ...row("post", p, String(p.author_id)),
+      ...row("post", p, p.author_id ? String(p.author_id) : ""),
       ...author(p.author_id),
       sample: !!p.is_sample,
       ...(p.is_sample

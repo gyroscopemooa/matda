@@ -85,6 +85,35 @@ test("Phase 1 remote schema protects profiles, photos, chat, notifications and m
       ),
       /Sample posts/,
     );
+    await db.exec("reset role; select set_config('request.jwt.claim.sub','',false); create role service_role bypassrls");
+    await db.exec(
+      await readFile("supabase/migrations/0011_guides_business.sql", "utf8"),
+    );
+    const businessSamples = await readFile(
+      "supabase/migrations/0012_business_samples.sql",
+      "utf8",
+    );
+    await db.exec(businessSamples);
+    await db.exec(businessSamples);
+    assert.equal(
+      (
+        await db.query<{ n: number }>(
+          "select count(*)::int n from posts where is_sample and author_id is null",
+        )
+      ).rows[0].n,
+      2,
+    );
+    await as(a);
+    await assert.rejects(
+      db.exec(
+        "insert into posts(author_id,post_type,audience,title,body,region) values(null,'request','consumer','not sample','body','서울특별시')",
+      ),
+    );
+    await assert.rejects(
+      db.exec(
+        "select community_start_chat('a6dd4f35-378a-4567-9e02-6bb6b8d97831')",
+      ),
+    );
     await db.exec("reset role; delete from posts where is_sample");
     await as(a);
     await db.exec(

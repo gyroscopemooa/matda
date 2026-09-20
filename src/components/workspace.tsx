@@ -1183,7 +1183,7 @@ export default function Workspace({
                 >
                   신고
                 </button>
-                {!isOwner && (
+                {!isOwner && !post.sample && (
                   <button
                     onClick={() =>
                       run(
