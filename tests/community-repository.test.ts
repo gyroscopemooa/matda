@@ -7,6 +7,7 @@ import {
 } from "../src/lib/community-repository";
 import { validateCommunityEnvironment } from "../src/lib/env";
 import type { Database, User } from "../src/lib/types";
+import { communitySnapshot } from "../src/lib/community-repository";
 
 test("Remote mapping preserves schedule, authors beyond first page and never trusts schedule as permissions", async () => {
   const person = {
@@ -140,4 +141,70 @@ test("Remote launch configuration fails closed for later phases, local URLs and 
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "",
     }),
   );
+});
+
+test("Remote request conversion uses a consented RPC and preserves server aggregate counts", async () => {
+  const calls: Record<string, unknown>[] = [];
+  const client = createClient("https://test.supabase.co", "test", {
+    global: {
+      fetch: async (input, options) => {
+        const name = new URL(String(input)).pathname.split("/").pop();
+        if (name === "consumer_quote_request") {
+          calls.push(JSON.parse(String(options?.body)));
+          return new Response(JSON.stringify("request-id"), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        const data =
+          name === "posts"
+            ? [
+                {
+                  id: "post",
+                  author_id: "owner",
+                  post_type: "request",
+                  status: "published",
+                },
+              ]
+            : name === "consumer_quote_summary"
+              ? [
+                  {
+                    post_id: "post",
+                    request_id: "request-id",
+                    started_at: "2026-09-20",
+                    expires_at: "2099-01-01",
+                    quote_limit: 5,
+                    extension_count: 0,
+                    quote_count: 4,
+                  },
+                ]
+              : [];
+        return new Response(JSON.stringify(data), {
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    },
+  });
+  const { db } = await loadCommunity(client, null);
+  const view = communitySnapshot(db);
+  assert.equal(view.rows.find((r) => r.id === "post")?.quoteCount, 4);
+  assert.equal(db.rows[0].quoteEnabled, true);
+  const user: User = {
+    id: "owner",
+    name: "고객",
+    email: "",
+    password: "",
+    role: "customer",
+    region: "",
+    createdAt: "2026-09-20",
+  };
+  assert.deepEqual(
+    await communityAction(client, db, user, "quote.enable", {
+      id: "post",
+      consent: true,
+    }),
+    { id: "post", requestId: "request-id" },
+  );
+  assert.deepEqual(calls, [
+    { target: "post", operation: "enable", consent: true },
+  ]);
 });

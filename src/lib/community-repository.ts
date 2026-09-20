@@ -1,6 +1,7 @@
 import type { SupabaseClient, User as Identity } from "@supabase/supabase-js";
 import { AppError, type Database, type Row, type User } from "./types";
 import { act, snapshot } from "./domain";
+import { flags } from "./config";
 
 export const remoteEnabled = () => process.env.DATA_ADAPTER === "supabase";
 type RecordRow = Record<string, unknown>;
@@ -132,8 +133,15 @@ export async function loadCommunity(
     authorAvatar: people.get(String(id))?.avatar || "sun",
   });
   const rows: Row[] = [];
+  const quoteRequests: RecordRow[] = flags.quotes
+    ? checked(await client.rpc("consumer_quote_summary")) || []
+    : [];
+  const requestsByPost = new Map(
+    quoteRequests.map((request) => [request.post_id, request]),
+  );
   for (const p of lists.posts) {
     const schedule = (p.schedule || {}) as RecordRow;
+    const request = requestsByPost.get(p.id);
     rows.push({
       ...row("post", p, p.author_id ? String(p.author_id) : ""),
       ...author(p.author_id),
@@ -147,7 +155,17 @@ export async function loadCommunity(
       category: p.category_id || "",
       serviceMode: p.service_mode || "local",
       images: p.images || [],
-      quoteEnabled: false,
+      quoteEnabled: !!request,
+      ...(request
+        ? {
+            quoteRequestId: request.request_id,
+            quoteStartedAt: request.started_at,
+            expiresAt: request.expires_at,
+            quoteLimit: request.quote_limit,
+            extensionCount: request.extension_count,
+            remoteQuoteCount: Number(request.quote_count),
+          }
+        : {}),
       scheduleMode: schedule.scheduleMode,
       desiredDate: schedule.desiredDate,
       desiredEndDate: schedule.desiredEndDate,
@@ -248,6 +266,18 @@ export async function communityAction(
   input: Record<string, unknown>,
 ) {
   if (user.disabled) throw new AppError("이용이 제한된 계정입니다.", 403);
+  if (["quote.enable", "quote.expand", "quote.extend"].includes(action)) {
+    if (!flags.quotes)
+      throw new AppError("견적 기능이 비활성화되어 있습니다.", 403);
+    const requestId = checked(
+      await client.rpc("consumer_quote_request", {
+        target: input.id,
+        operation: action.split(".")[1],
+        consent: input.consent === true,
+      }),
+    );
+    return { id: input.id, requestId };
+  }
   if (action === "conversation.create") {
     const id = checked(
       await client.rpc("community_start_chat", { target: input.targetId }),
@@ -286,7 +316,14 @@ export async function communityAction(
     throw new AppError("현재 공개 단계에서 지원하지 않는 기능입니다.", 400);
   if (
     action.startsWith("post.") &&
-    (input.quoteEnabled || input.audience === "business")
+    ((input.quoteEnabled &&
+      !(
+        action === "post.update" &&
+        db.rows.some(
+          (r) => r.id === input.id && r.kind === "post" && r.quoteEnabled,
+        )
+      )) ||
+      input.audience === "business")
   )
     throw new AppError("현재는 커뮤니티 글만 등록할 수 있어요.");
   const result = act(db, user, action, input);

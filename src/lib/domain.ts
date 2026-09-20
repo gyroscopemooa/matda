@@ -204,9 +204,11 @@ export function snapshot(db: Database, user?: User) {
           ? { ...source, category: normalizeCategory(String(source.category)) }
           : source;
         if (r.kind === "post" && r.quoteEnabled) {
-          const quoteCount = db.rows.filter(
-            (q) => q.kind === "quote" && q.postId === r.id,
-          ).length;
+          const quoteCount =
+            typeof r.remoteQuoteCount === "number"
+              ? r.remoteQuoteCount
+              : db.rows.filter((q) => q.kind === "quote" && q.postId === r.id)
+                  .length;
           return {
             ...r,
             quoteCount,
@@ -348,6 +350,18 @@ export function act(
         throw new AppError("글 종류를 확인해주세요.");
       if (audience === "business") requireOrg(db, input.orgId, user);
       const quoteEnabled = type === "request" && !!input.quoteEnabled;
+      if (existing && quoteEnabled && !existing.quoteEnabled)
+        throw new AppError("글 상세의 견적 요청으로 전환 버튼을 이용해주세요.");
+      if (existing?.quoteEnabled && (!quoteEnabled || type !== "request"))
+        throw new AppError(
+          "견적 모집을 시작한 글은 일반 글로 변경할 수 없어요.",
+        );
+      if (
+        existing?.quoteEnabled &&
+        (category !== normalizeCategory(String(existing.category)) ||
+          audience !== existing.audience)
+      )
+        throw new AppError("견적 모집을 시작한 글의 분야는 변경할 수 없어요.");
       if (quoteEnabled && !existing?.quoteEnabled) {
         const requests = db.rows.filter(
           (r) => r.ownerId === user.id && active(r, now),
@@ -416,6 +430,7 @@ export function act(
               ).toISOString(),
               quoteLimit: policy.defaultLimit,
               extensionCount: 0,
+              quoteStartedAt: new Date(now).toISOString(),
             }
           : {}),
       };
@@ -624,6 +639,43 @@ export function act(
         }
       return { ok: true };
     }
+    case "quote.enable": {
+      const post = get("post");
+      owned(post, user);
+      if (input.consent !== true)
+        throw new AppError("견적 모집 시작에 동의해주세요.");
+      if (
+        post.type !== "request" ||
+        post.status !== "published" ||
+        post.sample ||
+        post.audience === "business"
+      )
+        throw new AppError(
+          "공개된 일반 해줘요 글만 견적 요청으로 전환할 수 있어요.",
+        );
+      if (post.quoteEnabled) return post;
+      const requests = db.rows.filter(
+        (r) => r.ownerId === user.id && active(r, now),
+      );
+      if (
+        requests.length >= policy.activeLimit ||
+        requests.filter(
+          (r) =>
+            normalizeCategory(String(r.category)) ===
+            normalizeCategory(String(post.category)),
+        ).length >= policy.categoryActiveLimit
+      )
+        throw new AppError(
+          "진행 중인 요청 한도에 도달했어요. 기존 요청을 확인해주세요.",
+        );
+      return update(post, {
+        quoteEnabled: true,
+        quoteStartedAt: new Date(now).toISOString(),
+        expiresAt: new Date(now + policy.defaultHours * hour).toISOString(),
+        quoteLimit: policy.defaultLimit,
+        extensionCount: 0,
+      });
+    }
     case "quote.submit": {
       provider(user);
       const post = find(db, input.postId, "post");
@@ -679,7 +731,8 @@ export function act(
         throw new AppError("더 이상 연장할 수 없습니다.");
       const expires = Math.min(
         Date.parse(String(post.expiresAt)) + policy.extensionHours * hour,
-        Date.parse(post.createdAt) + policy.maxHours * hour,
+        Date.parse(String(post.quoteStartedAt || post.createdAt)) +
+          policy.maxHours * hour,
       );
       if (expires <= now) throw new AppError("최대 모집기간이 지났습니다.");
       return update(post, {

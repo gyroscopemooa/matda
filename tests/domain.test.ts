@@ -427,18 +427,22 @@ test("Phase 6: cancellation, failure and no-award states cannot reopen", () => {
 test("Quote expiry is not reset by toggling, and declining completion removes completed state", () => {
   const d = db(),
     p = post(d);
-  act(
-    d,
-    customer,
-    "post.update",
-    {
-      id: p.id,
-      body: "수정",
-      region: "서울 강남구",
-      category: "청소",
-      quoteEnabled: false,
-    },
-    now + hour,
+  assert.throws(
+    () =>
+      act(
+        d,
+        customer,
+        "post.update",
+        {
+          id: p.id,
+          body: "수정",
+          region: "서울 강남구",
+          category: "청소",
+          quoteEnabled: false,
+        },
+        now + hour,
+      ),
+    /일반 글/,
   );
   act(
     d,

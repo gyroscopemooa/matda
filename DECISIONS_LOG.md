@@ -135,3 +135,6 @@
 ## 2026-09-20 Cloudflare Workers 배포 준비
 사용자 선택에 따라 Workers + OpenNext 설정과 Git 빌드 명령 추가. 사진/인증/DB는 Supabase 유지. Next production build 통과, Windows OpenNext 최종 번들은 symlink EPERM으로 실패하여 Workers 실행 검증은 미완료. Cloudflare Linux Git build/deploy가 다음 단계. .env 파일 포함 빌드를 차단하여 로컬 설정 번들 유출 예방. 실제 배포/DNS 변경 없음. docs/CLOUDFLARE_DEPLOY.md 참조.
 
+# 2026-09-20 Phase 2A 진행
+
+다음 단계 진행 요청에 따라 기존 전환 계획의 구현을 시작했다. 기존 글 전환은 별도 동의 액션으로 만들고 원래 ID를 유지한다. 견적 시작 후 일반 글 전환/분야 변경은 차단한다. 모집 최대기간은 원래 글 작성일이 아닌 견적 시작일 기준이다. 원격 서비스는 후속 견적·거래 연결 전까지 Phase 1로 유지한다. 진행률은 docs/PHASE2_PROGRESS.md의 6개 완료 묶음 기준으로 관리한다.

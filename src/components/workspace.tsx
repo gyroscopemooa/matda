@@ -465,13 +465,13 @@ export default function Workspace({
             existing?.region || (region !== "전체 지역" ? region : user.region),
           ),
         },
-        ...(flags.quotes
+        ...(flags.quotes && !existing
           ? [
               {
                 key: "quoteEnabled",
                 label: "업체 견적 받기",
                 options: ["받지 않기", "견적 받기"],
-                value: existing?.quoteEnabled ? "견적 받기" : "받지 않기",
+                value: "받지 않기",
               },
             ]
           : []),
@@ -518,7 +518,9 @@ export default function Workspace({
               : Object.entries(postTypes).find(
                   ([, v]) => v === values.type,
                 )?.[0],
-          quoteEnabled: flags.quotes && values.quoteEnabled === "견적 받기",
+          quoteEnabled: existing
+            ? !!existing.quoteEnabled
+            : flags.quotes && values.quoteEnabled === "견적 받기",
           audience: biz ? "business" : "consumer",
           orgId: rows
             .filter((r) => r.kind === "organization")
@@ -1130,6 +1132,48 @@ export default function Workspace({
           )}
           <div className="body-text">{str(post.body)}</div>
           <p className="muted">희망 일정: {scheduleLabel(post)}</p>
+          {flags.quotes &&
+            isOwner &&
+            post.type === "request" &&
+            !post.quoteEnabled &&
+            !post.sample &&
+            post.status === "published" &&
+            post.audience !== "business" && (
+              <div className="panel">
+                <h2>이 글로 업체 견적을 받아보세요</h2>
+                <p>
+                  글·사진·댓글·기존 대화는 그대로 유지됩니다. 시작하면 72시간
+                  동안 최대 5개의 견적을 받습니다.
+                </p>
+                <button
+                  className="primary"
+                  onClick={() =>
+                    openForm(
+                      "견적 요청으로 전환",
+                      [
+                        {
+                          key: "consent",
+                          label: "기존 글로 견적 모집을 시작할까요?",
+                          options: ["선택해주세요", "동의하고 시작"],
+                          required: true,
+                        },
+                      ],
+                      async (values) => {
+                        if (values.consent !== "동의하고 시작")
+                          throw new Error("견적 모집 시작에 동의해주세요.");
+                        await action("quote.enable", {
+                          id: post.id,
+                          consent: true,
+                        });
+                      },
+                      "견적 모집 시작",
+                    )
+                  }
+                >
+                  견적 요청으로 전환
+                </button>
+              </div>
+            )}
           <div className="actions">
             {isOwner ? (
               <>
