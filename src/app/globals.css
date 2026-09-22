@@ -1999,6 +1999,73 @@ dialog .muted {
   border-radius: 12px;
   box-shadow: 0 4px 18px #15273f30;
 }
+.event-campaign {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #1c3150;
+  background: #eef5ff;
+  border: 1px solid #d6e6fb;
+}
+.event-campaign img {
+  width: 72px;
+  height: 56px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-radius: 9px;
+}
+.event-campaign-copy { display: grid; gap: 4px; min-width: 0; }
+.event-campaign-copy strong { font-size: 14px; }
+.event-campaign-copy span { color: #60738d; font-size: 13px; line-height: 1.45; white-space: pre-line; }
+.event-campaign-cta { width: fit-content; color: #1760c7; font-size: 13px; font-weight: 700; }
+.event-campaign-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  min-height: 30px;
+  margin-left: auto;
+  padding: 0;
+  color: #627895;
+  background: transparent;
+  border: 0;
+}
+.event-campaign-announcement_bar {
+  min-height: 38px;
+  justify-content: center;
+  padding: 6px 24px;
+  border-width: 0 0 1px;
+  border-radius: 0;
+}
+.event-campaign-announcement_bar .event-campaign-copy { display: flex; align-items: baseline; gap: 8px; }
+.event-campaign-announcement_bar img { width: 42px; height: 28px; }
+.event-campaign-home_banner,
+.event-campaign-my_page_entry { margin: 0 0 20px; padding: 16px; border-radius: 14px; }
+.event-campaign-my_page_entry { margin-top: 16px; }
+.event-campaign-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #15273f66;
+}
+.event-campaign-modal {
+  width: min(440px, 100%);
+  padding: 22px;
+  border-radius: 18px;
+  box-shadow: 0 18px 50px #10233d44;
+}
+.event-campaign-modal img { width: 112px; height: 88px; }
+@media (max-width: 700px) {
+  .event-campaign-announcement_bar { justify-content: flex-start; padding-inline: 16px; }
+  .event-campaign-announcement_bar .event-campaign-copy { display: grid; gap: 1px; }
+  .event-campaign-announcement_bar img { display: none; }
+  .event-campaign-home_banner,
+  .event-campaign-my_page_entry { padding: 14px; }
+}
 .dialog-notice .icon-button {
   flex-shrink: 0;
   color: inherit;

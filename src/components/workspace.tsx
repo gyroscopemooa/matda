@@ -78,6 +78,10 @@ import {
 } from "@/lib/config";
 import type { Row, PublicUser } from "@/lib/types";
 import { communityBrowser } from "@/lib/community-browser";
+import {
+  EventCampaignPlacement,
+  EventCampaignProvider,
+} from "./event-campaigns";
 type Snapshot = {
   user: PublicUser | null;
   rows: Row[];
@@ -1025,6 +1029,9 @@ export default function Workspace({
             )}
           </span>
         </section>
+        {path === "/" && (
+          <EventCampaignPlacement placement="home_banner" />
+        )}
         {popular.length > 0 && (
           <section className="popular-posts" aria-label="이번 주 인기글">
             <h2>
@@ -2172,6 +2179,7 @@ export default function Workspace({
             로그아웃
           </button>
         </section>
+        <EventCampaignPlacement placement="my_page_entry" />
         {user.role === "admin" && (
           <Link className="primary" href="/admin">
             관리자 대시보드
@@ -3614,7 +3622,9 @@ export default function Workspace({
   const isFeed =
     !preparing && ["/", "/community", "/quotes", "/biz"].includes(path);
   return (
-    <>
+    <EventCampaignProvider>
+      <>
+      <EventCampaignPlacement placement="announcement_bar" />
       <a className="skip-link" href="#main">
         본문으로 건너뛰기
       </a>
@@ -3988,6 +3998,7 @@ export default function Workspace({
           <span>MY</span>
         </Link>
       </nav>
+      {path === "/" && <EventCampaignPlacement placement="home_modal" />}
       {toast && !modal && !authOpen && (
         <div className="toast" role="status">
           {toast}
@@ -4300,6 +4311,7 @@ export default function Workspace({
           )
         )}
       </dialog>
-    </>
+      </>
+    </EventCampaignProvider>
   );
 }
