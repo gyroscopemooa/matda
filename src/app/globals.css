@@ -2066,6 +2066,58 @@ dialog .muted {
   .event-campaign-home_banner,
   .event-campaign-my_page_entry { padding: 14px; }
 }
+.runtime-site-notice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 6px 40px;
+  color: #1c3150;
+  background: #eef5ff;
+  border-bottom: 1px solid #d6e6fb;
+  font-size: 13px;
+}
+.runtime-site-notice-maintenance {
+  color: #7a4a06;
+  background: #fff4e0;
+  border-bottom-color: #f4dba8;
+}
+.runtime-site-notice-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.runtime-site-notice-copy strong {
+  font-size: 13px;
+}
+.runtime-site-notice-copy span {
+  color: #60738d;
+  font-size: 13px;
+}
+.runtime-site-notice-cta {
+  color: #1760c7;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.runtime-site-notice-close {
+  position: absolute;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  min-height: 26px;
+  padding: 0;
+  color: #627895;
+  background: transparent;
+  border: 0;
+}
+@media (max-width: 700px) {
+  .runtime-site-notice { padding-inline: 16px 40px; }
+  .runtime-site-notice-copy { display: grid; gap: 1px; }
+}
 .dialog-notice .icon-button {
   flex-shrink: 0;
   color: inherit;

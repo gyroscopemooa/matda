@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { siteConfig } from "@/lib/config";
 import { siteUrl, homeTitle, homeDescription } from "@/lib/seo";
+import { RuntimeSiteNotice } from "@/components/runtime-site-notice";
 export const metadata: Metadata = {
   title: {
     default: homeTitle,
@@ -28,7 +29,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        <RuntimeSiteNotice />
+        {children}
+      </body>
     </html>
   );
 }
