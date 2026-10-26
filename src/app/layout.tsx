@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { siteConfig } from "@/lib/config";
 import { siteUrl, homeTitle, homeDescription } from "@/lib/seo";
@@ -33,6 +34,7 @@ export default function RootLayout({
         <RuntimeSiteNotice />
         {children}
       </body>
+      <GoogleAnalytics gaId="G-SEBTHHB5HC" />
     </html>
   );
 }
