@@ -34,7 +34,7 @@ export default function RootLayout({
         <RuntimeSiteNotice />
         {children}
       </body>
-      <GoogleAnalytics gaId="G-SEBTHHB5HC" />
+      <GoogleAnalytics gaId="G-SEBTHHBSHC" />
     </html>
   );
 }
