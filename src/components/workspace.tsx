@@ -17,6 +17,8 @@ import {
 } from "@/lib/proposals";
 import GuideAdmin from "./guide-admin";
 import GuideLibrary from "./guide-library";
+import CommunityLinks from "./community-links";
+import PostBody from "./post-body";
 import { publishedGuides, type Guide } from "@/lib/guides";
 import RotatingWelcome from "./rotating-welcome";
 import PostKindPicker from "./post-kind-picker";
@@ -199,8 +201,10 @@ function FieldInput({
 }
 export default function Workspace({
   initialGuides = publishedGuides,
+  initialPosts,
 }: {
   initialGuides?: Guide[];
+  initialPosts?: Row[];
 }) {
   const path = usePathname();
   const router = useRouter();
@@ -208,10 +212,10 @@ export default function Workspace({
   const biz = path.startsWith("/biz") && !preparing;
   const [data, setData] = useState<Snapshot>({
     user: null,
-    rows: [],
+    rows: initialPosts || [],
     mode: "",
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialPosts === undefined);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [myActivity, setMyActivity] = useState<"posts" | "comments">("posts");
   const [welcomeMeme, setWelcomeMeme] = useState(false);
@@ -1223,7 +1227,7 @@ export default function Workspace({
               ))}
             </div>
           )}
-          <div className="body-text">{str(post.body)}</div>
+          <PostBody body={str(post.body)} />
           <p className="muted">희망 일정: {scheduleLabel(post)}</p>
           {flags.quotes &&
             isOwner &&
@@ -1368,6 +1372,9 @@ export default function Workspace({
             </details>
           </div>
         </section>
+        {post.status === "published" && (
+          <CommunityLinks post={post} rows={rows} guides={initialGuides} onWrite={() => createPost()} />
+        )}
         {flags.quotes && !!post.quoteEnabled && (
           <section className="panel">
             <h2>
@@ -3366,6 +3373,26 @@ export default function Workspace({
     return (
       <>
         <h1>운영 관리</h1>
+        <section className="panel">
+          <h2>커뮤니티 수동 게시</h2>
+          <p>
+            운영자 계정으로 직접 작성한 글은 게시 후 상세 화면이나 MY에서 수정할
+            수 있습니다. 사진은 글쓰기 창에서 올려주세요.
+          </p>
+          <p>
+            하나의 질문에 답하고, 첫 문단에 핵심 답을 적어주세요. 준비 조건 →
+            실행 순서 → 안 되는 경우와 대안 → 관련 안내 순서로 작성하세요.
+          </p>
+          <p>
+            관련 글은 [요청 사진 준비 방법](/posts/글ID), 가이드는 [청소 준비
+            안내](/guides/cleaning-request) 형식으로 연결할 수 있습니다. 확인한
+            글 주소만 입력하세요.
+          </p>
+          <button className="primary" onClick={() => createPost()}>
+            커뮤니티 글 직접 작성
+          </button>
+          <Link href="/my">내가 작성한 글 수정하기</Link>
+        </section>
         <GuideAdmin />
         <p className="muted">
           게시글·댓글 숨김은 일반 이용자에게 보이지 않게 처리하며 복원할 수
@@ -3593,6 +3620,7 @@ export default function Workspace({
   ) : path === "/guides" || path.startsWith("/guides/") ? (
     <GuideLibrary
       articles={initialGuides}
+      posts={rows}
       slug={path.split("/")[2]}
       onRequest={requestFromGuide}
     />

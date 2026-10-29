@@ -1,4 +1,6 @@
 import { readGuides } from "@/lib/guide-server";
+import { readPublicPosts } from "@/lib/community-public";
+import { indexablePost } from "@/lib/community-content";
 import { siteUrl, searchEnabled, homeTitle, homeDescription } from "@/lib/seo";
 export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
@@ -36,7 +38,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : titles[parts.join("/")];
   let description =
     "가벼운 글쓰기부터 업체와의 연결까지, 같은 공간에서 시작하세요.";
-  if (parts.length === 2 && ["posts", "providers"].includes(parts[0])) {
+  const publicPost =
+    parts[0] === "posts" && parts.length === 2
+      ? (await readPublicPosts()).find((post) => post.id === parts[1])
+      : undefined;
+  const searchable =
+    searchEnabled() &&
+    (!parts.length ||
+      parts[0] === "guides" ||
+      parts.join("/") === "community" ||
+      !!(publicPost && indexablePost(publicPost)));
+  if (publicPost) {
+    title = String(publicPost.title);
+    description = String(publicPost.body).slice(0, 150);
+  }
+  if (parts.length === 2 && parts[0] === "providers") {
     try {
       const row = remoteEnabled()
         ? (
@@ -79,8 +95,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: !parts.length ? homeDescription : description,
     alternates: { canonical: siteUrl + "/" + parts.join("/") },
     robots: {
-      index: searchEnabled() && (!parts.length || parts[0] === "guides"),
-      follow: searchEnabled() && (!parts.length || parts[0] === "guides"),
+      index: searchable,
+      follow: searchable,
     },
     openGraph: {
       title: title || siteConfig.name,
@@ -123,7 +139,10 @@ export default async function Page({ params }: Props) {
     !(await readGuides()).some((g) => g.slug === parts[1])
   )
     notFound();
-  const articles = parts[0] === "guides" ? await readGuides() : undefined;
+  const publicPage =
+    !parts.length || ["community", "posts", "guides"].includes(parts[0]);
+  const articles = publicPage ? await readGuides() : undefined;
+  const initialPosts = publicPage ? await readPublicPosts() : undefined;
   const guide = articles?.find((g) => g.slug === parts[1]);
   const structured = guide
     ? {
@@ -155,7 +174,11 @@ export default async function Page({ params }: Props) {
           }}
         />
       )}
-      <Workspace initialGuides={articles} />
+      <Workspace
+        key={parts.join("/")}
+        initialGuides={articles}
+        initialPosts={initialPosts}
+      />
     </>
   );
 }

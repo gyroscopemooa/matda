@@ -114,7 +114,7 @@ const row = (kind: string, r: RecordRow, owner: string): Row => ({
   kind,
   ownerId: owner,
   createdAt: String(r.created_at || new Date().toISOString()),
-  updatedAt: String(r.created_at || new Date().toISOString()),
+  updatedAt: String(r.updated_at || r.created_at || new Date().toISOString()),
 });
 export async function loadCommunity(
   client: SupabaseClient,

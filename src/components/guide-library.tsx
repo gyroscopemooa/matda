@@ -3,15 +3,19 @@ import Link from "next/link";
 import { useState } from "react";
 import { categories } from "@/lib/config";
 import { publishedGuides, type Guide } from "@/lib/guides";
+import { indexablePost, relatedTopic } from "@/lib/community-content";
+import type { Row } from "@/lib/types";
 
 export default function GuideLibrary({
   slug,
   articles = publishedGuides,
   onRequest,
+  posts = [],
 }: {
   slug?: string;
   articles?: Guide[];
   onRequest: (guide: Guide) => void;
+  posts?: Row[];
 }) {
   const [category, setCategory] = useState("전체");
   const [query, setQuery] = useState("");
@@ -96,7 +100,7 @@ export default function GuideLibrary({
         <h2>함께 읽어보세요</h2>
         <div className="guide-grid">
           {articles
-            .filter((g) => g.slug !== slug)
+            .filter((g) => g.slug !== slug && relatedTopic(guide, g))
             .slice(0, 2)
             .map((g) => (
               <Link className="panel" href={"/guides/" + g.slug} key={g.slug}>
@@ -104,6 +108,26 @@ export default function GuideLibrary({
               </Link>
             ))}
         </div>
+        {posts.some(
+          (post) => indexablePost(post) && relatedTopic(guide, post),
+        ) && (
+          <section>
+            <h2>이 주제를 이야기한 커뮤니티 글</h2>
+            <ul>
+              {posts
+                .filter(
+                  (post) => indexablePost(post) && relatedTopic(guide, post),
+                )
+                .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+                .slice(0, 3)
+                .map((post) => (
+                  <li key={post.id}>
+                    <Link href={`/posts/${post.id}`}>{String(post.title)}</Link>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        )}
       </article>
     );
   const filtered = articles.filter(
